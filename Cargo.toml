@@ -1,0 +1,9 @@
+[package]
+name = "pacman-json"
+version = "0.1.0"
+edition = "2021"
+
+## https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+alpm = "2.2.2"
