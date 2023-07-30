@@ -4,7 +4,7 @@
 use alpm::{Alpm, PackageReason, SigLevel};
 use std::{process::Command, ffi::OsStr};
 
-/// Reads pacman.conf from the cli `pacman-conf`
+/// Reads pacman.conf via the cli `pacman-conf`
 fn read_conf<I, S>(args: I) -> String
 where
     I: IntoIterator<Item = S>,
@@ -20,18 +20,75 @@ where
     return String::from_utf8_lossy(&cmd_out).to_string();
 }
 
+/// Parses and updates the SigLevel from the cli `pacman-conf`
+fn update_siglevel(siglevel: &str, original: SigLevel) -> SigLevel {
+
+    // process_siglevel: https://gitlab.archlinux.org/pacman/pacman/-/blob/master/src/pacman/conf.c
+    // show_siglevel: https://gitlab.archlinux.org/pacman/pacman/-/blob/master/src/pacman/pacman-conf.c
+
+    let slset = |sl: SigLevel| { original | sl };
+    let slunset = |sl: SigLevel| { original & !sl };
+
+    let package_trust_all =
+        SigLevel::PACKAGE_MARGINAL_OK
+      | SigLevel::PACKAGE_UNKNOWN_OK;
+
+    let database_trust_all =
+        SigLevel::DATABASE_MARGINAL_OK
+      | SigLevel::DATABASE_UNKNOWN_OK;
+
+    match siglevel {
+        "PackageNever" => slunset(SigLevel::PACKAGE),
+        "PackageOptional" => slset(SigLevel::PACKAGE | SigLevel::PACKAGE_OPTIONAL),
+        "PackageRequired" => slset(SigLevel::PACKAGE) & !SigLevel::PACKAGE_OPTIONAL,
+        "PackageTrustedOnly" => slunset(package_trust_all),
+        "PackageTrustAll" => slset(package_trust_all),
+        "DatabaseNever" => slunset(SigLevel::DATABASE),
+        "DatabaseOptional" => slset(SigLevel::DATABASE | SigLevel::DATABASE_OPTIONAL),
+        "DatabaseRequired" => slset(SigLevel::DATABASE) & !SigLevel::DATABASE_OPTIONAL,
+        "DatabaseTrustedOnly" => slunset(database_trust_all),
+        "DatabaseTrustAll" => slset(database_trust_all),
+        &_ => original
+    }
+}
+
+/// Updates the SigLevel(s) recursively, from a multiline string
+fn recurse_siglevels(siglevels: String, original: SigLevel) -> SigLevel {
+
+    let mut sig_level = original;
+    for level in siglevels.split_terminator('\n') {
+        sig_level = update_siglevel(level, sig_level)
+    }
+    return sig_level;
+
+}
+
+/// Finds the default SigLevel from `pacman.conf`
+fn default_siglevel() -> SigLevel {
+    let siglevels = read_conf([ "SigLevel" ]);
+    return recurse_siglevels(siglevels, SigLevel::USE_DEFAULT);
+}
+
+/// Finds the SigLevel of a repo
+fn repo_siglevel(repo: &str, default: SigLevel) -> SigLevel {
+    let siglevels = read_conf([ "--repo=", &repo, "SigLevel" ]);
+    return recurse_siglevels(siglevels, default);
+}
+
 fn main() {
 
     let root = read_conf([ "RootDir" ]);
     let db_path = read_conf([ "DBPath" ]);
-    let repo_list = read_conf([ "--repo-list" ]);
+    let all_repos = read_conf([ "--repo-list" ]);
+
     let handle = Alpm::new(root, db_path).unwrap();
 
-    for repo in repo_list.split_terminator('\n') {
-        let sig_level = SigLevel::USE_DEFAULT;
+    let default_siglevel = default_siglevel();
+    for repo in all_repos.split_terminator('\n') {
+        let sig_level = repo_siglevel(repo, default_siglevel);
         handle
-        .register_syncdb(repo, sig_level)
-        .unwrap();
+            .register_syncdb(repo, sig_level)
+            .unwrap();
     }
 
     // iterate through each database
