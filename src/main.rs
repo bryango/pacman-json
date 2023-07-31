@@ -4,7 +4,40 @@
 mod siglevel;
 use crate::siglevel::{read_conf, default_siglevel, repo_siglevel};
 
-use alpm::{Alpm, PackageReason};
+use alpm::{Alpm, PackageReason, Package, Db};
+
+/// Locates a Package from the databases
+fn db_with_pkg<'a>(handle: &'a Alpm, package: Package) -> (Db<'a>, Package<'a>) {
+
+    let find_in_db = |db: Db<'a>| {
+        // look for a package by name in a database
+        // the database is implemented as a hashmap
+        // so this is faster than iterating:
+        if let Ok(pkg) = db.pkg(package.name()) {
+            // demand that they share the same packager
+            // we do not check `version`
+            // because the `local` version could be outdated
+            if pkg.packager() == package.packager() {
+                return Some(pkg);
+            }
+        }
+        return None;
+    };
+
+    // iterate through each database
+    for db in handle.syncdbs() {
+        if let Some(pkg) = find_in_db(db) {
+            return (db, pkg);
+        }
+    }
+
+    // otherwise, the package must be in the `local` database
+    if let Some(pkg) = find_in_db(handle.localdb()) {
+        return (handle.localdb(), pkg);
+    }
+    panic!("{:?} not found in the databases", package)
+
+}
 
 fn main() {
 
@@ -15,7 +48,8 @@ fn main() {
     eprintln!("DBPath: {db_path}");
 
     let default_siglevel = default_siglevel();
-    eprintln!("SigLevel::{default_siglevel:?}\n");
+    eprintln!("SigLevel::{default_siglevel:?}");
+    eprintln!("");
 
     let handle = Alpm::new(root, db_path).unwrap();
 
@@ -28,13 +62,15 @@ fn main() {
         // eprintln!("{repo}: SigLevel::{sig_level:?}");
     }
 
-    eprint!("Explicit:");
-    for pkg in handle.localdb().pkgs() {
-        if pkg.reason() == PackageReason::Explicit {
-            eprint!(" {}", pkg.name());
+    eprintln!("Explicit:");
+    for package in handle.localdb().pkgs() {
+        if package.reason() == PackageReason::Explicit {
+            let (db, pkg) = db_with_pkg(&handle, package);
+            println!("{}/{} {}", db.name(), pkg.name(), pkg.packager().unwrap());
         }
     }
-    eprintln!("");
+
+    // dump_pkg_search: https://gitlab.archlinux.org/pacman/pacman/-/blob/master/src/pacman/package.c
 
     // // iterate through each database
     // for db in handle.syncdbs() {
