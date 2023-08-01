@@ -41,40 +41,60 @@ pub struct PackageInfo<'h> {
     validated_by: PackageValidation,
 }
 
-trait ToInfo {
-    fn to_info(&self) -> PackageInfo;
+impl<'h> From<Package<'h>> for PackageInfo<'h> {
+    fn from(pkg: Package) -> Self {
+        Self {
+            package: pkg,
+            repository: pkg.db(),
+            name: pkg.name(),
+            version: pkg.version(),
+            description: pkg.desc(),
+            architecture: pkg.arch(),
+            url: pkg.url(),
+            licenses: pkg.licenses(),
+            groups: pkg.groups(),
+            provides: pkg.provides(),
+            depends_on: pkg.depends(),
+            optional_deps: pkg.optdepends(),
+            required_by: pkg.required_by(),
+            optional_for: pkg.optional_for(),
+            conflicts_with: pkg.conflicts(),
+            replaces: pkg.replaces(),
+            download_size: pkg.size(),
+            installed_size: pkg.isize(),
+            packager: pkg.packager(),
+            build_date: pkg.build_date(),
+            install_date: pkg.install_date(),
+            install_reason: pkg.reason(),
+            install_script: pkg.has_scriptlet(),
+            md5_sum: pkg.md5sum(),
+            sha_256_sum: pkg.sha256sum(),
+            signatures: pkg.sig(),
+            validated_by: pkg.validation()
+        }
+    }
 }
 
-impl ToInfo for Package<'_> {
-    fn to_info(&self) -> PackageInfo {
-        PackageInfo {
-            package: *self,
-            repository: self.db(),
-            name: self.name(),
-            version: self.version(),
-            description: self.desc(),
-            architecture: self.arch(),
-            url: self.url(),
-            licenses: self.licenses(),
-            groups: self.groups(),
-            provides: self.provides(),
-            depends_on: self.depends(),
-            optional_deps: self.optdepends(),
-            required_by: self.required_by(),
-            optional_for: self.optional_for(),
-            conflicts_with: self.conflicts(),
-            replaces: self.replaces(),
-            download_size: self.size(),
-            installed_size: self.isize(),
-            packager: self.packager(),
-            build_date: self.build_date(),
-            install_date: self.install_date(),
-            install_reason: self.reason(),
-            install_script: self.has_scriptlet(),
-            md5_sum: self.md5sum(),
-            sha_256_sum: self.sha256sum(),
-            signatures: self.sig(),
-            validated_by: self.validation()
+#[derive(Serialize)]
+pub struct DepInfo<'h> {
+    #[serde(skip)]
+    dep: Dep<'h>,
+    name: &'h str,
+    depmod: String,
+    version: Option<&'h str>,
+    description: Option<&'h str>,
+    name_hash: u64,
+}
+
+impl<'h> From<Dep<'h>> for DepInfo<'h> {
+    fn from(dep: Dep) -> Self {
+        Self {
+            dep: dep,
+            name: dep.name(),
+            depmod: format!("{:?}", dep.depmod()),
+            version: dep.version().map(|x| x.as_str()),
+            description: dep.desc(),
+            name_hash: dep.name_hash()
         }
     }
 }
