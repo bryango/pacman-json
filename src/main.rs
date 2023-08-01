@@ -2,7 +2,10 @@
 // https://github.com/archlinux/alpm.rs/blob/master/alpm/examples/packages.rs#L38
 
 mod siglevel;
+mod info;
+
 use crate::siglevel::{read_conf, default_siglevel, repo_siglevel};
+use crate::info::{PackageInfo};
 
 use alpm::{Alpm, PackageReason, Package, Db};
 
@@ -18,6 +21,7 @@ fn db_with_pkg<'a>(handle: &'a Alpm, package: Package) -> (Db<'a>, Package<'a>) 
             // we do not check `version`
             // because the `local` version could be outdated
             if pkg.packager() == package.packager() {
+                // ^ Deref coercion for method call: Package -> Pkg
                 return Some(pkg);
             }
         }
