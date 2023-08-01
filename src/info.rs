@@ -1,8 +1,6 @@
 
-
-use alpm::{Package, Db, AlpmList, Dep, AlpmListMut, PackageReason, Signature, PackageValidation, Error, IntoAlpmListItem};
-use serde::Serialize;
-use serde::ser::{Serializer, SerializeSeq};
+use alpm::{Package, Db, AlpmList, Dep, AlpmListMut, PackageReason, Signature, PackageValidation, Error};
+use serde::{Serialize, Serializer, ser::SerializeSeq};
 
 #[derive(Serialize)]
 pub struct PackageInfo<'h> {
@@ -15,14 +13,16 @@ pub struct PackageInfo<'h> {
     description: Option<&'h str>,
     architecture: Option<&'h str>,
     url: Option<&'h str>,
-    #[serde(serialize_with = "serialize_alpm_list")]
+    #[serde(serialize_with = "serialize_alpm_list_str")]
     licenses: AlpmList<'h, &'h str>,
-    #[serde(serialize_with = "serialize_alpm_list")]
+    #[serde(serialize_with = "serialize_alpm_list_str")]
     groups: AlpmList<'h, &'h str>,
     provides: AlpmList<'h, Dep<'h>>,
     depends_on: AlpmList<'h, Dep<'h>>,
     optional_deps: AlpmList<'h, Dep<'h>>,
+    #[serde(serialize_with = "serialize_alpm_list_mut_string")]
     required_by: AlpmListMut<'h, String>,
+    #[serde(serialize_with = "serialize_alpm_list_mut_string")]
     optional_for: AlpmListMut<'h, String>,
     conflicts_with: AlpmList<'h, Dep<'h>>,
     replaces: AlpmList<'h, Dep<'h>>,
@@ -79,27 +79,6 @@ impl ToInfo for Package<'_> {
     }
 }
 
-// trait SerializeAlpm {
-//     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-//     where
-//         S: Serializer;
-// }
-
-
-// impl Serialize for Db<'_> {
-//     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-//     where
-//         S: Serializer,
-//     {
-//         // 3 is the number of fields in the struct.
-//         let mut state = serializer.serialize_struct("Color", 3)?;
-//         state.serialize_field("r", &self.r)?;
-//         state.serialize_field("g", &self.g)?;
-//         state.serialize_field("b", &self.b)?;
-//         state.end()
-//     }
-// }
-
 fn serialize_db<S>(opt_db: &Option<Db>, serializer: S) -> Result<S::Ok, S::Error>
 where
     S: Serializer,
@@ -110,13 +89,27 @@ where
     }
 }
 
-fn serialize_alpm_list<S>(alpm_list: &AlpmList<'_, &str>, serializer: S) -> Result<S::Ok, S::Error>
+fn serialize_alpm_list_str<S>(alpm_list: &AlpmList<'_, &str>, serializer: S) -> Result<S::Ok, S::Error>
 where
     S: Serializer,
 {
-    let mut seq = serializer.serialize_seq(Some(alpm_list.len()))?;
-    for item in alpm_list {
-        seq.serialize_element(item)?;
-    }
-    seq.end()
+    serializer.collect_seq(alpm_list.iter())
 }
+
+fn serialize_alpm_list_mut_string<S>(alpm_list: &AlpmListMut<'_, String>, serializer: S) -> Result<S::Ok, S::Error>
+where
+    S: Serializer,
+{
+    serializer.collect_seq(alpm_list.iter())
+}
+
+// fn serialize_alpm_list_dep<S>(alpm_list: &AlpmList<'_, Dep<'_>>, serializer: S) -> Result<S::Ok, S::Error>
+// where
+//     S: Serializer,
+// {
+//     let mut seq = serializer.serialize_seq(Some(alpm_list.len()))?;
+//     for item in alpm_list {
+//         seq.serialize_element(item)?;
+//     }
+//     seq.end()
+// }
