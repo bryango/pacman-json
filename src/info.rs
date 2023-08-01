@@ -1,13 +1,18 @@
 
-use alpm::{Package, Db, AlpmList, Dep, AlpmListMut, PackageReason, Signature, PackageValidation, Error};
+use std::fmt;
+use alpm::{Package, AlpmList, Dep, AlpmListMut};
 use serde::{Serialize, Serializer, ser::SerializeSeq};
+
+
+fn debug_format<T: fmt::Debug>(object: T) -> String {
+    format!("{:?}", object)
+}
 
 #[derive(Serialize)]
 pub struct PackageInfo<'h> {
-    #[serde(skip)]
-    package: Package<'h>,
-    #[serde(serialize_with = "serialize_db")]
-    repository: Option<Db<'h>>,
+    // #[serde(skip)]
+    // package: Package<'h>,
+    repository: Option<&'h str>,
     name: &'h str,
     version: &'h str,
     description: Option<&'h str>,
@@ -17,14 +22,19 @@ pub struct PackageInfo<'h> {
     licenses: AlpmList<'h, &'h str>,
     #[serde(serialize_with = "serialize_alpm_list_str")]
     groups: AlpmList<'h, &'h str>,
+    #[serde(serialize_with = "serialize_alpm_list_dep")]
     provides: AlpmList<'h, Dep<'h>>,
+    #[serde(serialize_with = "serialize_alpm_list_dep")]
     depends_on: AlpmList<'h, Dep<'h>>,
+    #[serde(serialize_with = "serialize_alpm_list_dep")]
     optional_deps: AlpmList<'h, Dep<'h>>,
     #[serde(serialize_with = "serialize_alpm_list_mut_string")]
     required_by: AlpmListMut<'h, String>,
     #[serde(serialize_with = "serialize_alpm_list_mut_string")]
     optional_for: AlpmListMut<'h, String>,
+    #[serde(serialize_with = "serialize_alpm_list_dep")]
     conflicts_with: AlpmList<'h, Dep<'h>>,
+    #[serde(serialize_with = "serialize_alpm_list_dep")]
     replaces: AlpmList<'h, Dep<'h>>,
     download_size: i64,
     // ^ `compressed_size` is the same as `download_size`
@@ -33,19 +43,19 @@ pub struct PackageInfo<'h> {
     packager: Option<&'h str>,
     build_date: i64,
     install_date: Option<i64>,
-    install_reason: PackageReason,
+    install_reason: String,
     install_script: bool,
     md5_sum: Option<&'h str>,
     sha_256_sum: Option<&'h str>,
-    signatures: Result<Signature, Error>,
-    validated_by: PackageValidation,
+    signatures: Result<String, String>,
+    validated_by: String,
 }
 
-impl<'h> From<Package<'h>> for PackageInfo<'h> {
-    fn from(pkg: Package) -> Self {
+impl<'h> From<&Package<'h>> for PackageInfo<'h> {
+    fn from(pkg: &Package<'h>) -> PackageInfo<'h> {
         Self {
-            package: pkg,
-            repository: pkg.db(),
+            // package: *pkg,
+            repository: pkg.db().map(|db| db.name()),
             name: pkg.name(),
             version: pkg.version(),
             description: pkg.desc(),
@@ -65,20 +75,18 @@ impl<'h> From<Package<'h>> for PackageInfo<'h> {
             packager: pkg.packager(),
             build_date: pkg.build_date(),
             install_date: pkg.install_date(),
-            install_reason: pkg.reason(),
+            install_reason: debug_format(pkg.reason()),
             install_script: pkg.has_scriptlet(),
             md5_sum: pkg.md5sum(),
             sha_256_sum: pkg.sha256sum(),
-            signatures: pkg.sig(),
-            validated_by: pkg.validation()
+            signatures: pkg.sig().map(debug_format).map_err(debug_format),
+            validated_by: format!("{:?}", pkg.validation())
         }
     }
 }
 
 #[derive(Serialize)]
 pub struct DepInfo<'h> {
-    #[serde(skip)]
-    dep: Dep<'h>,
     name: &'h str,
     depmod: String,
     version: Option<&'h str>,
@@ -86,26 +94,15 @@ pub struct DepInfo<'h> {
     name_hash: u64,
 }
 
-impl<'h> From<Dep<'h>> for DepInfo<'h> {
-    fn from(dep: Dep) -> Self {
+impl<'h> From<&Dep<'h>> for DepInfo<'h> {
+    fn from(dep: &Dep<'h>) -> DepInfo<'h> {
         Self {
-            dep: dep,
             name: dep.name(),
             depmod: format!("{:?}", dep.depmod()),
             version: dep.version().map(|x| x.as_str()),
             description: dep.desc(),
             name_hash: dep.name_hash()
         }
-    }
-}
-
-fn serialize_db<S>(opt_db: &Option<Db>, serializer: S) -> Result<S::Ok, S::Error>
-where
-    S: Serializer,
-{
-    match *opt_db {
-        Some(db) => serializer.serialize_str(db.name()),
-        None => serializer.serialize_none(),
     }
 }
 
@@ -123,13 +120,13 @@ where
     serializer.collect_seq(alpm_list.iter())
 }
 
-// fn serialize_alpm_list_dep<S>(alpm_list: &AlpmList<'_, Dep<'_>>, serializer: S) -> Result<S::Ok, S::Error>
-// where
-//     S: Serializer,
-// {
-//     let mut seq = serializer.serialize_seq(Some(alpm_list.len()))?;
-//     for item in alpm_list {
-//         seq.serialize_element(item)?;
-//     }
-//     seq.end()
-// }
+fn serialize_alpm_list_dep<S>(alpm_list: &AlpmList<'_, Dep<'_>>, serializer: S) -> Result<S::Ok, S::Error>
+where
+    S: Serializer,
+{
+    let mut seq = serializer.serialize_seq(Some(alpm_list.len()))?;
+    for item in alpm_list {
+        seq.serialize_element(&DepInfo::from(&item))?;
+    }
+    seq.end()
+}

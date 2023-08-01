@@ -5,7 +5,7 @@ mod siglevel;
 mod info;
 
 use crate::siglevel::{read_conf, default_siglevel, repo_siglevel};
-use crate::info::{PackageInfo};
+use crate::info::PackageInfo;
 
 use alpm::{Alpm, PackageReason, Package, Db};
 
