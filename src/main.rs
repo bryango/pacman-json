@@ -1,16 +1,18 @@
-// https://gitlab.archlinux.org/pacman/pacman/-/blob/master/src/pacman/package.c#L192
-// https://github.com/archlinux/alpm.rs/blob/master/alpm/examples/packages.rs#L38
 
 mod siglevel;
 mod info;
 
-use crate::siglevel::{read_conf, default_siglevel, repo_siglevel};
+#[allow(unused_imports)]
 use crate::info::{PackageInfo, decode_keyid, add_sync_info, add_local_info};
+use crate::siglevel::{read_conf, default_siglevel, repo_siglevel};
 
-use alpm::{Alpm, PackageReason, Package, Db};
+use alpm::{Alpm, Package, Db, PackageReason};
 
 /// Locates a Package from the databases
 fn db_with_pkg<'a>(handle: &'a Alpm, package: Package) -> (Db<'a>, Package<'a>) {
+
+    // https://github.com/archlinux/alpm.rs/blob/master/alpm/examples/packages.rs
+    // dump_pkg_search, print_installed: https://gitlab.archlinux.org/pacman/pacman/-/blob/master/src/pacman/package.c
 
     let find_in_db = |db: Db<'a>| {
         // look for a package by name in a database
@@ -43,6 +45,9 @@ fn db_with_pkg<'a>(handle: &'a Alpm, package: Package) -> (Db<'a>, Package<'a>) 
 
 }
 
+/// Dumps json data of the explicitly installed pacman packages.
+/// Local packages are matched against the sync databases,
+/// and upstream info is added to the output.
 fn main() {
 
     let root = read_conf([ "RootDir" ]);
@@ -58,6 +63,7 @@ fn main() {
     let handle = Alpm::new(root, db_path).unwrap();
 
     // register sync databases from pacman.conf
+    eprintln!("--repo-list:");
     for repo in all_repos.split_terminator('\n') {
         let sig_level = repo_siglevel(repo, default_siglevel);
         handle
@@ -65,85 +71,29 @@ fn main() {
             .unwrap();
         eprintln!("{repo}: SigLevel::{sig_level:?}");
     }
+    eprintln!("");
 
-    // eprintln!("Explicit:");
-    // for package in handle.localdb().pkgs() {
-    //     if package.reason() == PackageReason::Explicit {
-    //         let (db, pkg) = db_with_pkg(&handle, package);
-    //         println!("{}/{} {}", db.name(), pkg.name(), pkg.packager().unwrap());
-    //     }
-    // }
-
-    let explicit: Vec<PackageInfo> = Vec::from_iter(
+    // going through explicitly installed packages
+    let explicits: Vec<PackageInfo> = Vec::from_iter(
         handle.localdb().pkgs().iter().filter_map(
-            |package| {
-                if package.reason() == PackageReason::Explicit {
-                    let (_, pkg) = db_with_pkg(&handle, package);
-                    let local_info = PackageInfo::from(&package);
-                    let sync_info = decode_keyid(&handle, PackageInfo::from(&pkg));
+            |local_pkg| {
+                if local_pkg.reason() == PackageReason::Explicit {
+                    let (_, sync_pkg) = db_with_pkg(&handle, local_pkg);
+                    let local_info = PackageInfo::from(&local_pkg);
+                    let sync_info = decode_keyid(
+                        &handle,
+                        PackageInfo::from(&sync_pkg)
+                    );
                     return Some(add_local_info(local_info, sync_info));
+                    // return Some(add_sync_info(local_info, sync_info));
                 }
                 return None;
             }
         )
     );
 
-    let json = serde_json::to_string(&explicit)
+    let json = serde_json::to_string(&explicits)
         .expect("failed serializing json");
     println!("{}", json);
 
-    // dump_pkg_search: https://gitlab.archlinux.org/pacman/pacman/-/blob/master/src/pacman/package.c
-
-    // // iterate through each database
-    // for db in handle.syncdbs() {
-    //     // search each database for packages matching the regex "linux-[a-z]" AND "headers"
-    //     for pkg in db.search(["linux-[a-z]", "headers"].iter()).unwrap() {
-    //         println!("{} {}", pkg.name(), pkg.desc().unwrap_or("None"));
-    //     }
-    // }
-
-    // // iterate through each database
-    // for db in handle.syncdbs() {
-    //     // look for a package named "pacman" in each databse
-    //     // the database is implemented as a hashmap so this is faster than iterating
-    //     if let Ok(pkg) = db.pkg("pacman") {
-    //         println!("{} {}", pkg.name(), pkg.desc().unwrap_or("None"));
-    //     }
-    // }
-
-    // // iterate through each database
-    // for db in handle.syncdbs() {
-    //     // iterate through every package in the databse
-    //     for pkg in db.pkgs() {
-    //         // print only explititly intalled packages
-    //         if pkg.reason() == PackageReason::Explicit {
-    //             println!("{} {}", pkg.name(), pkg.desc().unwrap_or("None"));
-    //         }
-    //     }
-    // }
-
-    // // iterate through each database
-    // for db in handle.syncdbs() {
-    //     // look for the base-devel group
-    //     if let Ok(group) = db.group("base-devel") {
-    //         // print each package in the group
-    //         for pkg in group.packages() {
-    //             println!("{} {}", pkg.name(), pkg.desc().unwrap_or("None"));
-    //         }
-    //     }
-    // }
-
-    // // find a package matching a dep
-    // let pkg = handle.syncdbs().find_satisfier("linux>3").unwrap();
-    // println!("{} {}", pkg.name(), pkg.desc().unwrap_or("None"));
-
-    // // load the pacman package from disk instead of from database
-    // let pkg = handle
-    //     .pkg_load(
-    //         "tests/pacman-5.1.3-1-x86_64.pkg.tar.xz",
-    //         true,
-    //         SigLevel::USE_DEFAULT,
-    //     )
-    //     .unwrap();
-    // println!("{} {}", pkg.name(), pkg.desc().unwrap_or("None"));
 }

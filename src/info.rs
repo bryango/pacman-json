@@ -1,13 +1,14 @@
 
 use std::fmt;
-use alpm::{Package, AlpmList, Dep, AlpmListMut, Alpm};
-use alpm::decode_signature;
+use alpm::{Package, Dep, AlpmList, AlpmListMut, Alpm, decode_signature};
 use serde::{Serialize, Serializer, ser::SerializeSeq};
 
 
 fn debug_format<T: fmt::Debug>(object: T) -> String {
     format!("{:?}", object)
 }
+
+// dump_pkg_full: https://gitlab.archlinux.org/pacman/pacman/-/blob/master/src/pacman/package.c
 
 #[derive(Serialize)]
 pub struct PackageInfo<'h> {
@@ -109,6 +110,48 @@ impl<'h> From<&Dep<'h>> for DepInfo<'h> {
     }
 }
 
+/// Decodes the signature & extracts the key ID
+pub fn decode_keyid<'h>(handle: &'h Alpm, pkg_info: PackageInfo<'h>) -> PackageInfo<'h> {
+    let sig = pkg_info.signatures.map(decode_signature);
+    let res =
+        if let Some(Ok(decoded)) = sig {
+            Some(
+                handle.extract_keyid(pkg_info.name, &decoded)
+                .map_err(debug_format)
+                .map(|x| x.into_iter().collect::<Vec<_>>())
+                .map_or_else(|err| vec![err], |res| res)
+            )
+        } else {
+            sig.map(debug_format).map(|err| vec![err])
+        };
+    PackageInfo {
+        key_id: res,
+        ..pkg_info
+    }
+}
+
+/// Adds sync database info to the local package
+#[allow(dead_code)]
+pub fn add_sync_info<'h>(local_info: PackageInfo<'h>, sync_info: PackageInfo<'h>) -> PackageInfo<'h> {
+    PackageInfo {
+        repository: sync_info.repository,
+        ..local_info
+    }
+}
+
+/// Adds local database info to the sync package
+pub fn add_local_info<'h>(local_info: PackageInfo<'h>, sync_info: PackageInfo<'h>) -> PackageInfo<'h> {
+    PackageInfo {
+        install_date: local_info.install_date,
+        install_reason: local_info.install_reason,
+        install_script: local_info.install_script,
+        ..sync_info
+    }
+}
+
+
+// implement the `serialize` functions used above
+
 fn serialize_alpm_list_str<S>(alpm_list: &AlpmList<'_, &str>, serializer: S) -> Result<S::Ok, S::Error>
 where
     S: Serializer,
@@ -132,41 +175,4 @@ where
         seq.serialize_element(&DepInfo::from(&item))?;
     }
     seq.end()
-}
-
-pub fn decode_keyid<'h>(handle: &'h Alpm, pkg_info: PackageInfo<'h>) -> PackageInfo<'h> {
-    let sig = pkg_info.signatures.map(decode_signature);
-    let res =
-        if let Some(Ok(decoded)) = sig {
-            Some(
-                handle.extract_keyid(pkg_info.name, &decoded)
-                .map_err(debug_format)
-                .map(|x| x.into_iter().collect::<Vec<_>>())
-                .map_or_else(|err| vec![err], |res| res)
-            )
-        } else {
-            sig.map(debug_format).map(|err| vec![err])
-        };
-    PackageInfo {
-        key_id: res,
-        ..pkg_info
-    }
-}
-
-/// Adds sync database info to the local package
-pub fn add_sync_info<'h>(local_info: PackageInfo<'h>, sync_info: PackageInfo<'h>) -> PackageInfo<'h> {
-    PackageInfo {
-        repository: sync_info.repository,
-        ..local_info
-    }
-}
-
-/// Adds local database info to the sync package
-pub fn add_local_info<'h>(local_info: PackageInfo<'h>, sync_info: PackageInfo<'h>) -> PackageInfo<'h> {
-    PackageInfo {
-        install_date: local_info.install_date,
-        install_reason: local_info.install_reason,
-        install_script: local_info.install_script,
-        ..sync_info
-    }
 }
