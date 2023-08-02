@@ -66,13 +66,31 @@ fn main() {
         // eprintln!("{repo}: SigLevel::{sig_level:?}");
     }
 
-    eprintln!("Explicit:");
-    for package in handle.localdb().pkgs() {
-        if package.reason() == PackageReason::Explicit {
-            let (db, pkg) = db_with_pkg(&handle, package);
-            println!("{}/{} {}", db.name(), pkg.name(), pkg.packager().unwrap());
-        }
-    }
+    // eprintln!("Explicit:");
+    // for package in handle.localdb().pkgs() {
+    //     if package.reason() == PackageReason::Explicit {
+    //         let (db, pkg) = db_with_pkg(&handle, package);
+    //         println!("{}/{} {}", db.name(), pkg.name(), pkg.packager().unwrap());
+    //     }
+    // }
+
+    let explicit: Vec<PackageInfo> = Vec::from_iter(
+        handle.localdb().pkgs().iter().filter_map(
+            |package| {
+                if package.reason() == PackageReason::Explicit {
+                    let (_, pkg) = db_with_pkg(&handle, package);
+                    // let local_info = PackageInfo::from(&package);
+                    let sync_info = PackageInfo::from(&pkg);
+                    return Some(sync_info);
+                }
+                return None;
+            }
+        )
+    );
+
+    let json = serde_json::to_string(&explicit)
+        .expect("failed serializing json");
+    println!("{}", json);
 
     // dump_pkg_search: https://gitlab.archlinux.org/pacman/pacman/-/blob/master/src/pacman/package.c
 

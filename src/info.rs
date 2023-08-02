@@ -1,6 +1,7 @@
 
 use std::fmt;
 use alpm::{Package, AlpmList, Dep, AlpmListMut};
+// use alpm::decode_signature;
 use serde::{Serialize, Serializer, ser::SerializeSeq};
 
 
@@ -47,7 +48,7 @@ pub struct PackageInfo<'h> {
     install_script: bool,
     md5_sum: Option<&'h str>,
     sha_256_sum: Option<&'h str>,
-    signatures: Result<String, String>,
+    signatures: Option<&'h str>,
     validated_by: String,
 }
 
@@ -79,14 +80,18 @@ impl<'h> From<&Package<'h>> for PackageInfo<'h> {
             install_script: pkg.has_scriptlet(),
             md5_sum: pkg.md5sum(),
             sha_256_sum: pkg.sha256sum(),
-            signatures: pkg.sig().map(debug_format).map_err(debug_format),
+            signatures: pkg.base64_sig(),
+                // .map(decode_signature)
+                // .map(|res| {
+                //     res.map_or_else(debug_format, debug_format)
+                // }),
             validated_by: format!("{:?}", pkg.validation())
         }
     }
 }
 
 #[derive(Serialize)]
-pub struct DepInfo<'h> {
+struct DepInfo<'h> {
     name: &'h str,
     depmod: String,
     version: Option<&'h str>,
