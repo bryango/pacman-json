@@ -1,7 +1,7 @@
 
 use std::fmt;
-use alpm::{Package, AlpmList, Dep, AlpmListMut};
-// use alpm::decode_signature;
+use alpm::{Package, AlpmList, Dep, AlpmListMut, Alpm};
+use alpm::decode_signature;
 use serde::{Serialize, Serializer, ser::SerializeSeq};
 
 
@@ -49,6 +49,7 @@ pub struct PackageInfo<'h> {
     md5_sum: Option<&'h str>,
     sha_256_sum: Option<&'h str>,
     signatures: Option<&'h str>,
+    key_id: Option<Vec<String>>,
     validated_by: String,
 }
 
@@ -81,10 +82,7 @@ impl<'h> From<&Package<'h>> for PackageInfo<'h> {
             md5_sum: pkg.md5sum(),
             sha_256_sum: pkg.sha256sum(),
             signatures: pkg.base64_sig(),
-                // .map(decode_signature)
-                // .map(|res| {
-                //     res.map_or_else(debug_format, debug_format)
-                // }),
+            key_id: None,
             validated_by: format!("{:?}", pkg.validation())
         }
     }
@@ -134,4 +132,41 @@ where
         seq.serialize_element(&DepInfo::from(&item))?;
     }
     seq.end()
+}
+
+pub fn decode_keyid<'h>(handle: &'h Alpm, pkg_info: PackageInfo<'h>) -> PackageInfo<'h> {
+    let sig = pkg_info.signatures.map(decode_signature);
+    let res =
+        if let Some(Ok(decoded)) = sig {
+            Some(
+                handle.extract_keyid(pkg_info.name, &decoded)
+                .map_err(debug_format)
+                .map(|x| x.into_iter().collect::<Vec<_>>())
+                .map_or_else(|err| vec![err], |res| res)
+            )
+        } else {
+            sig.map(debug_format).map(|err| vec![err])
+        };
+    PackageInfo {
+        key_id: res,
+        ..pkg_info
+    }
+}
+
+/// Adds sync database info to the local package
+pub fn add_sync_info<'h>(local_info: PackageInfo<'h>, sync_info: PackageInfo<'h>) -> PackageInfo<'h> {
+    PackageInfo {
+        repository: sync_info.repository,
+        ..local_info
+    }
+}
+
+/// Adds local database info to the sync package
+pub fn add_local_info<'h>(local_info: PackageInfo<'h>, sync_info: PackageInfo<'h>) -> PackageInfo<'h> {
+    PackageInfo {
+        install_date: local_info.install_date,
+        install_reason: local_info.install_reason,
+        install_script: local_info.install_script,
+        ..sync_info
+    }
 }

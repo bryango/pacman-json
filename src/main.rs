@@ -5,7 +5,7 @@ mod siglevel;
 mod info;
 
 use crate::siglevel::{read_conf, default_siglevel, repo_siglevel};
-use crate::info::PackageInfo;
+use crate::info::{PackageInfo, decode_keyid, add_sync_info, add_local_info};
 
 use alpm::{Alpm, PackageReason, Package, Db};
 
@@ -63,7 +63,7 @@ fn main() {
         handle
             .register_syncdb(repo, sig_level)
             .unwrap();
-        // eprintln!("{repo}: SigLevel::{sig_level:?}");
+        eprintln!("{repo}: SigLevel::{sig_level:?}");
     }
 
     // eprintln!("Explicit:");
@@ -79,9 +79,9 @@ fn main() {
             |package| {
                 if package.reason() == PackageReason::Explicit {
                     let (_, pkg) = db_with_pkg(&handle, package);
-                    // let local_info = PackageInfo::from(&package);
-                    let sync_info = PackageInfo::from(&pkg);
-                    return Some(sync_info);
+                    let local_info = PackageInfo::from(&package);
+                    let sync_info = decode_keyid(&handle, PackageInfo::from(&pkg));
+                    return Some(add_local_info(local_info, sync_info));
                 }
                 return None;
             }
