@@ -13,6 +13,7 @@ fn db_with_pkg<'a>(handle: &'a Alpm, package: Package) -> (Db<'a>, Package<'a>) 
 
     // https://github.com/archlinux/alpm.rs/blob/master/alpm/examples/packages.rs
     // dump_pkg_search, print_installed: https://gitlab.archlinux.org/pacman/pacman/-/blob/master/src/pacman/package.c
+    // display, filter, pkg_get_locality: https://gitlab.archlinux.org/pacman/pacman/-/blob/master/src/pacman/query.c
 
     let find_in_db = |db: Db<'a>| {
         // look for a package by name in a database
