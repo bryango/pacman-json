@@ -132,7 +132,10 @@ pub fn decode_keyid<'h>(handle: &'h Alpm, pkg_info: PackageInfo<'h>) -> PackageI
 
 /// Adds sync database info to the local package
 #[allow(dead_code)]
-pub fn add_sync_info<'h>(local_info: PackageInfo<'h>, sync_info: PackageInfo<'h>) -> PackageInfo<'h> {
+pub fn add_sync_info<'h>(
+    local_info: PackageInfo<'h>,
+    sync_info: PackageInfo<'h>
+) -> PackageInfo<'h> {
     PackageInfo {
         repository: sync_info.repository,
         ..local_info
@@ -140,7 +143,10 @@ pub fn add_sync_info<'h>(local_info: PackageInfo<'h>, sync_info: PackageInfo<'h>
 }
 
 /// Adds local database info to the sync package
-pub fn add_local_info<'h>(local_info: PackageInfo<'h>, sync_info: PackageInfo<'h>) -> PackageInfo<'h> {
+pub fn add_local_info<'h>(
+    local_info: PackageInfo<'h>,
+    sync_info: PackageInfo<'h>
+) -> PackageInfo<'h> {
     PackageInfo {
         install_date: local_info.install_date,
         install_reason: local_info.install_reason,
@@ -151,15 +157,23 @@ pub fn add_local_info<'h>(local_info: PackageInfo<'h>, sync_info: PackageInfo<'h
 
 
 // implement the `serialize` functions used above
+// `impl Serialize for AlpmList` does not work due to rust "orphan rules":
+// see e.g. https://github.com/Ixrec/rust-orphan-rules
 
-fn serialize_alpm_list_mut_string<S>(alpm_list: &AlpmListMut<'_, String>, serializer: S) -> Result<S::Ok, S::Error>
+fn serialize_alpm_list_mut_string<S>(
+    alpm_list: &AlpmListMut<'_, String>,
+    serializer: S
+) -> Result<S::Ok, S::Error>
 where
     S: Serializer,
 {
     serializer.collect_seq(alpm_list.iter())
 }
 
-fn serialize_alpm_list<'h, S, T, U>(alpm_list: &'h AlpmList<'h, T>, serializer: S) -> Result<S::Ok, S::Error>
+fn serialize_alpm_list<'h, S, T, U>(
+    alpm_list: &'h AlpmList<'h, T>,
+    serializer: S
+) -> Result<S::Ok, S::Error>
 where
     S: Serializer,
     T: Into<U> + IntoAlpmListItem<'h, 'h>,
