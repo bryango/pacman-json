@@ -185,3 +185,56 @@ where
     }
     seq.end()
 }
+
+struct AlpmSeries<I>
+where
+    I: IntoIterator
+{ list: I }
+
+impl<I> std::ops::Deref for AlpmSeries<I>
+where
+    I: IntoIterator
+{
+    type Target = I;
+
+    fn deref(&self) -> &Self::Target {
+        &self.list
+    }
+}
+
+impl<'a, T> From<AlpmList<'a, T>> for AlpmSeries<AlpmList<'a, T>>
+where
+    for<'b> T: IntoAlpmListItem<'a, 'b>,
+{
+    fn from(alpm_list: AlpmList<'a, T>) -> Self {
+        Self { list: alpm_list }
+    }
+}
+
+impl<'a, T> From<AlpmListMut<'a, T>> for AlpmSeries<AlpmListMut<'a, T>>
+where
+    for<'b> T: IntoAlpmListItem<'a, 'b>,
+{
+    fn from(alpm_list: AlpmListMut<'a, T>) -> Self {
+        Self { list: alpm_list }
+    }
+}
+
+impl<I, T, U> Serialize for AlpmSeries<I>
+where
+    I: IntoIterator<IntoIter = T> + Copy,
+    T: ExactSizeIterator + Iterator<Item = U>,
+    U: Serialize
+{
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer
+    {
+        let iter = self.into_iter();
+        let mut seq = serializer.serialize_seq(Some(iter.len()))?;
+        for item in iter {
+            seq.serialize_element::<U>(&item.into())?;
+        }
+        seq.end()
+    }
+}
