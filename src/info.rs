@@ -20,9 +20,9 @@ pub struct PackageInfo<'h> {
     description: Option<&'h str>,
     architecture: Option<&'h str>,
     url: Option<&'h str>,
-    #[serde(serialize_with = "serialize_alpm_list_str")]
+    #[serde(serialize_with = "serialize_alpm_list::<__S, &str, &str>")]
     licenses: AlpmList<'h, &'h str>,
-    #[serde(serialize_with = "serialize_alpm_list_str")]
+    #[serde(serialize_with = "serialize_alpm_list::<__S, &str, &str>")]
     groups: AlpmList<'h, &'h str>,
     #[serde(serialize_with = "serialize_alpm_list::<_, Dep<'_>, DepInfo>")]
     provides: AlpmList<'h, Dep<'h>>,
@@ -151,13 +151,6 @@ pub fn add_local_info<'h>(local_info: PackageInfo<'h>, sync_info: PackageInfo<'h
 
 
 // implement the `serialize` functions used above
-
-fn serialize_alpm_list_str<S>(alpm_list: &AlpmList<'_, &str>, serializer: S) -> Result<S::Ok, S::Error>
-where
-    S: Serializer,
-{
-    serializer.collect_seq(alpm_list.iter())
-}
 
 fn serialize_alpm_list_mut_string<S>(alpm_list: &AlpmListMut<'_, String>, serializer: S) -> Result<S::Ok, S::Error>
 where
