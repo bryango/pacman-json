@@ -98,8 +98,8 @@ struct DepInfo<'h> {
     name_hash: u64,
 }
 
-impl<'h> From<Dep<'h>> for DepInfo<'h> {
-    fn from(dep: Dep<'h>) -> DepInfo<'h> {
+impl<'h> From<&Dep<'h>> for DepInfo<'h> {
+    fn from(dep: &Dep<'h>) -> DepInfo<'h> {
         Self {
             name: dep.name(),
             depmod: format!("{:?}", dep.depmod()),
@@ -166,18 +166,13 @@ where
     serializer.collect_seq(alpm_list.iter())
 }
 
-fn serialize_alpm_list_dep<'h, S, I, T, U, V>(alpm_list: &T, serializer: S) -> Result<S::Ok, S::Error>
+fn serialize_alpm_list_dep<S>(alpm_list: &AlpmList<'_, Dep<'_>>, serializer: S) -> Result<S::Ok, S::Error>
 where
     S: Serializer,
-    T: IntoIterator<IntoIter = I>,
-    I: ExactSizeIterator + Iterator<Item = U>,
-    U: Into<V>,
-    V: Serialize
 {
-    let iter = alpm_list.into_iter();
-    let mut seq = serializer.serialize_seq(Some(iter.len()))?;
-    for item in iter {
-        seq.serialize_element::<V>(&item.into())?;
+    let mut seq = serializer.serialize_seq(Some(alpm_list.len()))?;
+    for item in alpm_list {
+        seq.serialize_element(&DepInfo::from(&item))?;
     }
     seq.end()
 }
