@@ -1,6 +1,6 @@
 
 use std::fmt;
-use alpm::{Package, Dep, AlpmList, AlpmListMut, Alpm, decode_signature};
+use alpm::{Package, Dep, AlpmList, AlpmListMut, Alpm, decode_signature, IntoAlpmListItem};
 use serde::{Serialize, Serializer, ser::SerializeSeq};
 
 
@@ -24,19 +24,19 @@ pub struct PackageInfo<'h> {
     licenses: AlpmList<'h, &'h str>,
     #[serde(serialize_with = "serialize_alpm_list_str")]
     groups: AlpmList<'h, &'h str>,
-    #[serde(serialize_with = "serialize_alpm_list_dep")]
+    #[serde(serialize_with = "serialize_alpm_list::<_, Dep<'_>, DepInfo>")]
     provides: AlpmList<'h, Dep<'h>>,
-    #[serde(serialize_with = "serialize_alpm_list_dep")]
+    #[serde(serialize_with = "serialize_alpm_list::<_, Dep<'_>, DepInfo>")]
     depends_on: AlpmList<'h, Dep<'h>>,
-    #[serde(serialize_with = "serialize_alpm_list_dep")]
+    #[serde(serialize_with = "serialize_alpm_list::<_, Dep<'_>, DepInfo>")]
     optional_deps: AlpmList<'h, Dep<'h>>,
     #[serde(serialize_with = "serialize_alpm_list_mut_string")]
     required_by: AlpmListMut<'h, String>,
     #[serde(serialize_with = "serialize_alpm_list_mut_string")]
     optional_for: AlpmListMut<'h, String>,
-    #[serde(serialize_with = "serialize_alpm_list_dep")]
+    #[serde(serialize_with = "serialize_alpm_list::<_, Dep<'_>, DepInfo>")]
     conflicts_with: AlpmList<'h, Dep<'h>>,
-    #[serde(serialize_with = "serialize_alpm_list_dep")]
+    #[serde(serialize_with = "serialize_alpm_list::<_, Dep<'_>, DepInfo>")]
     replaces: AlpmList<'h, Dep<'h>>,
     download_size: i64,
     // ^ `compressed_size` is the same as `download_size`
@@ -98,8 +98,8 @@ struct DepInfo<'h> {
     name_hash: u64,
 }
 
-impl<'h> From<&Dep<'h>> for DepInfo<'h> {
-    fn from(dep: &Dep<'h>) -> DepInfo<'h> {
+impl<'h> From<Dep<'h>> for DepInfo<'h> {
+    fn from(dep: Dep<'h>) -> DepInfo<'h> {
         Self {
             name: dep.name(),
             depmod: format!("{:?}", dep.depmod()),
@@ -166,13 +166,15 @@ where
     serializer.collect_seq(alpm_list.iter())
 }
 
-fn serialize_alpm_list_dep<S>(alpm_list: &AlpmList<'_, Dep<'_>>, serializer: S) -> Result<S::Ok, S::Error>
+fn serialize_alpm_list<'h, S, T, U>(alpm_list: &'h AlpmList<'h, T>, serializer: S) -> Result<S::Ok, S::Error>
 where
     S: Serializer,
+    T: Into<U> + IntoAlpmListItem<'h, 'h>,
+    U: Serialize + From<<T>::Borrow>
 {
     let mut seq = serializer.serialize_seq(Some(alpm_list.len()))?;
     for item in alpm_list {
-        seq.serialize_element(&DepInfo::from(&item))?;
+        seq.serialize_element::<U>(&item.into())?;
     }
     seq.end()
 }
