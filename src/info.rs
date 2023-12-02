@@ -84,7 +84,7 @@ impl<'h> From<&Package<'h>> for PackageInfo<'h> {
             sha_256_sum: pkg.sha256sum(),
             signatures: pkg.base64_sig(),
             key_id: None,
-            validated_by: format!("{:?}", pkg.validation())
+            validated_by: debug_format(pkg.validation())
         }
     }
 }
@@ -102,7 +102,7 @@ impl<'h> From<Dep<'h>> for DepInfo<'h> {
     fn from(dep: Dep<'h>) -> DepInfo<'h> {
         Self {
             name: dep.name(),
-            depmod: format!("{:?}", dep.depmod()),
+            depmod: debug_format(dep.depmod()),
             version: dep.version().map(|x| x.as_str()),
             description: dep.desc(),
             name_hash: dep.name_hash()

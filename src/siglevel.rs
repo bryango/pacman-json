@@ -11,6 +11,9 @@ where
     let cmd_out =
         Command::new("pacman-conf")
         .args(args)
+        .env("LC_ALL", "C.UTF-8")
+        .env("LANGUAGE", "C.UTF-8")
+            // ^ https://sourceware.org/bugzilla/show_bug.cgi?id=16621
         .output()
         .expect("failed to call pacman-conf")
         .stdout;
