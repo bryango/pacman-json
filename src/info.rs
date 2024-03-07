@@ -1,8 +1,6 @@
-
-use std::fmt;
 use alpm::{decode_signature, Alpm, AlpmList, AlpmListMut, Dep, IntoAlpmListItem, Package};
 use serde::{Serialize, Serializer};
-
+use std::fmt;
 
 fn debug_format<T: fmt::Debug>(object: T) -> String {
     format!("{:?}", object)
@@ -75,7 +73,7 @@ impl<'h> From<&Package<'h>> for PackageInfo<'h> {
             sha_256_sum: pkg.sha256sum(),
             signatures: pkg.base64_sig(),
             key_id: None,
-            validated_by: debug_format(pkg.validation())
+            validated_by: debug_format(pkg.validation()),
         }
     }
 }
@@ -96,7 +94,7 @@ impl<'h> From<Dep<'h>> for DepInfo<'h> {
             depmod: debug_format(dep.depmod()),
             version: dep.version().map(|x| x.as_str()),
             description: dep.desc(),
-            name_hash: dep.name_hash()
+            name_hash: dep.name_hash(),
         }
     }
 }
@@ -104,17 +102,17 @@ impl<'h> From<Dep<'h>> for DepInfo<'h> {
 /// Decodes the signature & extracts the key ID
 pub fn decode_keyid<'h>(handle: &'h Alpm, pkg_info: PackageInfo<'h>) -> PackageInfo<'h> {
     let sig = pkg_info.signatures.map(decode_signature);
-    let res =
-        if let Some(Ok(decoded)) = sig {
-            Some(
-                handle.extract_keyid(pkg_info.name, &decoded)
+    let res = if let Some(Ok(decoded)) = sig {
+        Some(
+            handle
+                .extract_keyid(pkg_info.name, &decoded)
                 .map_err(debug_format)
                 .map(|x| x.into_iter().collect::<Vec<_>>())
-                .map_or_else(|err| vec![err], |res| res)
-            )
-        } else {
-            sig.map(debug_format).map(|err| vec![err])
-        };
+                .map_or_else(|err| vec![err], |res| res),
+        )
+    } else {
+        sig.map(debug_format).map(|err| vec![err])
+    };
     PackageInfo {
         key_id: res,
         ..pkg_info
@@ -125,7 +123,7 @@ pub fn decode_keyid<'h>(handle: &'h Alpm, pkg_info: PackageInfo<'h>) -> PackageI
 #[allow(dead_code)]
 pub fn add_sync_info<'h>(
     local_info: PackageInfo<'h>,
-    sync_info: PackageInfo<'h>
+    sync_info: PackageInfo<'h>,
 ) -> PackageInfo<'h> {
     PackageInfo {
         repository: sync_info.repository,
@@ -136,7 +134,7 @@ pub fn add_sync_info<'h>(
 /// Adds local database info to the sync package
 pub fn add_local_info<'h>(
     local_info: PackageInfo<'h>,
-    sync_info: PackageInfo<'h>
+    sync_info: PackageInfo<'h>,
 ) -> PackageInfo<'h> {
     PackageInfo {
         install_date: local_info.install_date,
@@ -145,7 +143,6 @@ pub fn add_local_info<'h>(
         ..sync_info
     }
 }
-
 
 /// A type to enclose various lists, e.g. packages, licenses, ... that are
 /// returned from alpm. This is a newtype around [`AlpmList`].
