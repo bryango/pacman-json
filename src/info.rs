@@ -1,7 +1,11 @@
+//! This module defines the [`PackageInfo`] struct for serializing package
+//! information, including functions to encode and decode relevant data.
+
 use alpm::{decode_signature, Alpm, AlpmList, AlpmListMut, Dep, IntoAlpmListItem, Package};
 use serde::{Serialize, Serializer};
 use std::fmt;
 
+/// Formats an object to String with its Debug info
 fn debug_format<T: fmt::Debug>(object: T) -> String {
     format!("{:?}", object)
 }
@@ -10,6 +14,7 @@ fn debug_format<T: fmt::Debug>(object: T) -> String {
 
 #[derive(Serialize)]
 pub struct PackageInfo<'h> {
+    // #[allow(dead_code)]
     // #[serde(skip)]
     // package: Package<'h>,
     repository: Option<&'h str>,
@@ -27,9 +32,9 @@ pub struct PackageInfo<'h> {
     optional_for: Vec<String>,
     conflicts_with: Vec<DepInfo<'h>>,
     replaces: Vec<DepInfo<'h>>,
+    /// `download_size` and `compressed_size` are the same;
+    /// both are `alpm_pkg_get_size` so we implement only one of them.
     download_size: i64,
-    // ^ `compressed_size` is the same as `download_size`
-    // both are `alpm_pkg_get_size`
     installed_size: i64,
     packager: Option<&'h str>,
     build_date: i64,
@@ -39,6 +44,8 @@ pub struct PackageInfo<'h> {
     md5_sum: Option<&'h str>,
     sha_256_sum: Option<&'h str>,
     signatures: Option<&'h str>,
+    /// `key_id` is set to None when initialized; it can be decoded on-demand
+    /// with the [`Alpm`] handle with the [`decode_keyid`] function.
     key_id: Option<Vec<String>>,
     validated_by: String,
 }
