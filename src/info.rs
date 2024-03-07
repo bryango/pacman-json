@@ -1,7 +1,7 @@
 
 use std::fmt;
-use alpm::{Package, Dep, AlpmList, AlpmListMut, Alpm, decode_signature, IntoAlpmListItem};
-use serde::{Serialize, Serializer, ser::SerializeSeq};
+use alpm::{decode_signature, Alpm, AlpmList, AlpmListMut, Dep, IntoAlpmListItem, Package};
+use serde::{Serialize, Serializer};
 
 
 fn debug_format<T: fmt::Debug>(object: T) -> String {
@@ -20,24 +20,15 @@ pub struct PackageInfo<'h> {
     description: Option<&'h str>,
     architecture: Option<&'h str>,
     url: Option<&'h str>,
-    #[serde(serialize_with = "serialize_alpm_list::<__S, &str, &str>")]
-    licenses: AlpmList<'h, &'h str>,
-    #[serde(serialize_with = "serialize_alpm_list::<__S, &str, &str>")]
-    groups: AlpmList<'h, &'h str>,
-    #[serde(serialize_with = "serialize_alpm_list::<_, Dep<'_>, DepInfo>")]
-    provides: AlpmList<'h, Dep<'h>>,
-    #[serde(serialize_with = "serialize_alpm_list::<_, Dep<'_>, DepInfo>")]
-    depends_on: AlpmList<'h, Dep<'h>>,
-    #[serde(serialize_with = "serialize_alpm_list::<_, Dep<'_>, DepInfo>")]
-    optional_deps: AlpmList<'h, Dep<'h>>,
-    #[serde(serialize_with = "serialize_alpm_list_mut_string")]
-    required_by: AlpmListMut<'h, String>,
-    #[serde(serialize_with = "serialize_alpm_list_mut_string")]
-    optional_for: AlpmListMut<'h, String>,
-    #[serde(serialize_with = "serialize_alpm_list::<_, Dep<'_>, DepInfo>")]
-    conflicts_with: AlpmList<'h, Dep<'h>>,
-    #[serde(serialize_with = "serialize_alpm_list::<_, Dep<'_>, DepInfo>")]
-    replaces: AlpmList<'h, Dep<'h>>,
+    licenses: PacList<'h, &'h str>,
+    groups: PacList<'h, &'h str>,
+    provides: Vec<DepInfo<'h>>,
+    depends_on: Vec<DepInfo<'h>>,
+    optional_deps: Vec<DepInfo<'h>>,
+    required_by: Vec<String>,
+    optional_for: Vec<String>,
+    conflicts_with: Vec<DepInfo<'h>>,
+    replaces: Vec<DepInfo<'h>>,
     download_size: i64,
     // ^ `compressed_size` is the same as `download_size`
     // both are `alpm_pkg_get_size`
@@ -64,15 +55,15 @@ impl<'h> From<&Package<'h>> for PackageInfo<'h> {
             description: pkg.desc(),
             architecture: pkg.arch(),
             url: pkg.url(),
-            licenses: pkg.licenses(),
-            groups: pkg.groups(),
-            provides: pkg.provides(),
-            depends_on: pkg.depends(),
-            optional_deps: pkg.optdepends(),
-            required_by: pkg.required_by(),
-            optional_for: pkg.optional_for(),
-            conflicts_with: pkg.conflicts(),
-            replaces: pkg.replaces(),
+            licenses: PacList(pkg.licenses()),
+            groups: PacList(pkg.groups()),
+            provides: PacList(pkg.provides()).into(),
+            depends_on: PacList(pkg.depends()).into(),
+            optional_deps: PacList(pkg.optdepends()).into(),
+            required_by: PacListMut(pkg.required_by()).into(),
+            optional_for: PacListMut(pkg.optional_for()).into(),
+            conflicts_with: PacList(pkg.conflicts()).into(),
+            replaces: PacList(pkg.replaces()).into(),
             download_size: pkg.size(),
             installed_size: pkg.isize(),
             packager: pkg.packager(),
@@ -156,32 +147,40 @@ pub fn add_local_info<'h>(
 }
 
 
-// implement the `serialize` functions used above
-// `impl Serialize for AlpmList` does not work due to rust "orphan rules":
-// see e.g. https://github.com/Ixrec/rust-orphan-rules
-
-fn serialize_alpm_list_mut_string<S>(
-    alpm_list: &AlpmListMut<'_, String>,
-    serializer: S
-) -> Result<S::Ok, S::Error>
+/// A type to enclose various lists, e.g. packages, licenses, ... that are
+/// returned from alpm. This is a newtype around [`AlpmList`].
+///
+/// `impl Serialize for AlpmList` does not work due to rust "orphan rules";
+/// see e.g. https://github.com/Ixrec/rust-orphan-rules.
+struct PacList<'a, T>(AlpmList<'a, T>);
+struct PacListMut<'a, T>(AlpmListMut<'a, T>)
 where
-    S: Serializer,
+    for<'b> T: IntoAlpmListItem<'a, 'b>;
+
+impl<'a, T> Serialize for PacList<'a, T>
+where
+    T: IntoAlpmListItem<'a, 'a>,
+    T::Borrow: Serialize,
 {
-    serializer.collect_seq(alpm_list.iter())
+    fn serialize<'h, S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        let alpm_list = self.0;
+        serializer.collect_seq(alpm_list.into_iter())
+    }
 }
 
-fn serialize_alpm_list<'h, S, T, U>(
-    alpm_list: &'h AlpmList<'h, T>,
-    serializer: S
-) -> Result<S::Ok, S::Error>
-where
-    S: Serializer,
-    T: Into<U> + IntoAlpmListItem<'h, 'h>,
-    U: Serialize + From<<T>::Borrow>
-{
-    let mut seq = serializer.serialize_seq(Some(alpm_list.len()))?;
-    for item in alpm_list {
-        seq.serialize_element::<U>(&item.into())?;
+/// Converts [`PacListMut<String>`] to a vec for easy serialization
+impl From<PacListMut<'_, String>> for Vec<String> {
+    fn from(wrapper: PacListMut<'_, String>) -> Self {
+        wrapper.0.into_iter().collect()
     }
-    seq.end()
+}
+
+/// Converts [`PacList<Dep>`] to a vec of [`DepInfo`] for easy serialization
+impl<'a> From<PacList<'a, Dep<'a>>> for Vec<DepInfo<'a>> {
+    fn from(wrapper: PacList<'a, Dep<'a>>) -> Self {
+        wrapper.0.into_iter().map(|p| p.into()).collect()
+    }
 }
