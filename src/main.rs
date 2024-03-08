@@ -1,19 +1,17 @@
-
-mod siglevel;
 mod info;
+mod siglevel;
 
 #[allow(unused_imports)]
-use crate::info::{PackageInfo, decode_keyid, add_sync_info, add_local_info};
-use crate::siglevel::{read_conf, default_siglevel, repo_siglevel};
+use crate::info::{add_local_info, add_sync_info, decode_keyid, PackageInfo};
+use crate::siglevel::{default_siglevel, read_conf, repo_siglevel};
 
-use alpm::{Alpm, Package, Db, PackageReason};
+use alpm::{Alpm, Db, Package, PackageReason};
 
 /// Locates a Package from the databases by its name, prioritizing packages
 /// from the sync database. The returned package must have the same packager
 /// as the input package. The function panics if the package is not found in
 /// the sync database nor in the local database.
 fn db_with_pkg<'a>(handle: &'a Alpm, package: Package) -> Result<(Db<'a>, Package<'a>), String> {
-
     // https://github.com/archlinux/alpm.rs/blob/master/alpm/examples/packages.rs
     // dump_pkg_search, print_installed: https://gitlab.archlinux.org/pacman/pacman/-/blob/master/src/pacman/package.c
     // display, filter, pkg_get_locality: https://gitlab.archlinux.org/pacman/pacman/-/blob/master/src/pacman/query.c
@@ -44,7 +42,6 @@ fn db_with_pkg<'a>(handle: &'a Alpm, package: Package) -> Result<(Db<'a>, Packag
         return Ok((handle.localdb(), pkg));
     }
     Err(format!("{:?} not found in the databases", package))
-
 }
 
 /// Enriches local package with sync database information, if possible.
@@ -70,10 +67,9 @@ fn local_pkg_with_sync_info<'a>(handle: &'a Alpm, local_pkg: Package<'a>) -> Pac
 /// Local packages are matched against the sync databases,
 /// and upstream info is added to the output.
 fn main() {
-
-    let root = read_conf([ "RootDir" ]);
-    let db_path = read_conf([ "DBPath" ]);
-    let all_repos = read_conf([ "--repo-list" ]);
+    let root = read_conf(["RootDir"]);
+    let db_path = read_conf(["DBPath"]);
+    let all_repos = read_conf(["--repo-list"]);
     eprintln!("RootDir: {root}");
     eprintln!("DBPath: {db_path}");
 
@@ -87,21 +83,19 @@ fn main() {
     eprintln!("--repo-list:");
     for repo in all_repos.split_terminator('\n') {
         let sig_level = repo_siglevel(repo, default_siglevel);
-        handle
-            .register_syncdb(repo, sig_level)
-            .unwrap();
+        handle.register_syncdb(repo, sig_level).unwrap();
         eprintln!("{repo}: SigLevel::{sig_level:?}");
     }
     eprintln!("");
 
-    let db_type = "local";
+    let db_type = "sync";
     let db_list = match db_type {
         "local" => vec![handle.localdb()],
         "sync" => handle.syncdbs().iter().collect(),
         _ => panic!("database type must be either \"local\" or \"sync\""),
     };
 
-    let pkg_filters = "explicit";
+    let pkg_filters = "none";
     let pkg_filter_map: for<'a> fn(&'a Alpm, Package<'a>) -> Option<PackageInfo<'a>> =
         match pkg_filters {
             "explicit" => |handle, local_pkg| {
@@ -122,10 +116,8 @@ fn main() {
                 .collect::<Vec<_>>()
         })
         .flatten()
-        .collect::<Vec<_>>(); // flattened list of packages
+        .collect(); // flattened list of packages
 
-    let json = serde_json::to_string(&all_packages)
-        .expect("failed serializing json");
+    let json = serde_json::to_string(&all_packages).expect("failed serializing json");
     println!("{}", json);
-
 }

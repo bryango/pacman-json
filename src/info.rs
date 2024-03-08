@@ -52,6 +52,7 @@ pub struct PackageInfo<'h> {
 
 impl<'h> From<&Package<'h>> for PackageInfo<'h> {
     fn from(pkg: &Package<'h>) -> PackageInfo<'h> {
+        eprintln!("pkg: {}", pkg.name());
         Self {
             // package: *pkg,
             repository: pkg.db().map(|db| db.name()),
