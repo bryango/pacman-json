@@ -28,8 +28,8 @@ pub struct PackageInfo<'h> {
     provides: Vec<DepInfo<'h>>,
     depends_on: Vec<DepInfo<'h>>,
     optional_deps: Vec<DepInfo<'h>>,
-    required_by: Cow<'h, [String]>,
-    optional_for: Cow<'h, [String]>,
+    required_by: Cow<'h, [Cow<'h, str>]>,
+    optional_for: Cow<'h, [Cow<'h, str>]>,
     conflicts_with: Vec<DepInfo<'h>>,
     replaces: Vec<DepInfo<'h>>,
     /// `download_size` and `compressed_size` are the same;
@@ -177,9 +177,9 @@ where
 }
 
 /// Converts [`PacListMut<String>`] to a vec for easy serialization
-impl From<PacListMut<'_, String>> for Cow<'_, [String]> {
-    fn from(wrapper: PacListMut<'_, String>) -> Self {
-        wrapper.0.into_iter().collect()
+impl<'h> From<PacListMut<'h, String>> for Cow<'h, [Cow<'h, str>]> {
+    fn from(wrapper: PacListMut<'h, String>) -> Self {
+        Cow::Owned(wrapper.0.into_iter().map(|x| Cow::Owned(x)).collect())
     }
 }
 
