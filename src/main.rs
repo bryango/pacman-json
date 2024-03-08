@@ -8,21 +8,22 @@ use crate::siglevel::{read_conf, default_siglevel, repo_siglevel};
 
 use alpm::{Alpm, Package, Db, PackageReason};
 
-/// Locates a Package from the databases
-fn db_with_pkg<'a>(handle: &'a Alpm, package: Package) -> (Db<'a>, Package<'a>) {
+/// Locates a Package from the databases by its name, prioritizing packages
+/// from the sync database. The returned package must have the same packager
+/// as the input package. The function panics if the package is not found in
+/// the sync database nor in the local database.
+fn db_with_pkg<'a>(handle: &'a Alpm, package: Package) -> Result<(Db<'a>, Package<'a>), String> {
 
     // https://github.com/archlinux/alpm.rs/blob/master/alpm/examples/packages.rs
     // dump_pkg_search, print_installed: https://gitlab.archlinux.org/pacman/pacman/-/blob/master/src/pacman/package.c
     // display, filter, pkg_get_locality: https://gitlab.archlinux.org/pacman/pacman/-/blob/master/src/pacman/query.c
 
     let find_in_db = |db: Db<'a>| {
-        // look for a package by name in a database
-        // the database is implemented as a hashmap
-        // so this is faster than iterating:
+        // look for a package by name in a database; the database is
+        // implemented as a hashmap so this is faster than iterating:
         if let Ok(pkg) = db.pkg(package.name()) {
-            // demand that they share the same packager
-            // we do not check `version`
-            // because the `local` version could be outdated
+            // verify that they share the same packager; we do not check
+            // `version`, because the `local` version could be outdated
             if pkg.packager() == package.packager() {
                 // ^ Deref coercion for method call: Package -> Pkg
                 return Some(pkg);
@@ -34,16 +35,35 @@ fn db_with_pkg<'a>(handle: &'a Alpm, package: Package) -> (Db<'a>, Package<'a>) 
     // iterate through each database
     for db in handle.syncdbs() {
         if let Some(pkg) = find_in_db(db) {
-            return (db, pkg);
+            return Ok((db, pkg));
         }
     }
 
     // otherwise, the package must be in the `local` database
     if let Some(pkg) = find_in_db(handle.localdb()) {
-        return (handle.localdb(), pkg);
+        return Ok((handle.localdb(), pkg));
     }
-    panic!("{:?} not found in the databases", package)
+    Err(format!("{:?} not found in the databases", package))
 
+}
+
+/// Enriches local package with sync database information, if possible.
+/// If the sync database information is available, it will be used as the
+/// base package as it contains more information.
+fn local_pkg_with_sync_info<'a>(handle: &'a Alpm, local_pkg: Package<'a>) -> PackageInfo<'a> {
+    let local_info = PackageInfo::from(&local_pkg);
+
+    let sync_pkg = match db_with_pkg(&handle, local_pkg) {
+        Err(msg) => {
+            eprintln!("{}", msg);
+            return local_info;
+        }
+        Ok((_, x)) => x,
+    };
+
+    let sync_info = decode_keyid(&handle, PackageInfo::from(&sync_pkg));
+    return add_local_info(local_info, sync_info);
+    // return add_sync_info(local_info, sync_info); // alternatively
 }
 
 /// Dumps json data of the explicitly installed pacman packages.
@@ -74,26 +94,37 @@ fn main() {
     }
     eprintln!("");
 
-    // going through explicitly installed packages
-    let explicits: Vec<PackageInfo> = Vec::from_iter(
-        handle.localdb().pkgs().iter().filter_map(
-            |local_pkg| {
+    let db_type = "local";
+    let db_list = match db_type {
+        "local" => vec![handle.localdb()],
+        "sync" => handle.syncdbs().iter().collect(),
+        _ => panic!("database type must be either \"local\" or \"sync\""),
+    };
+
+    let pkg_filters = "explicit";
+    let pkg_filter_map: for<'a> fn(&'a Alpm, Package<'a>) -> Option<PackageInfo<'a>> =
+        match pkg_filters {
+            "explicit" => |handle, local_pkg| {
                 if local_pkg.reason() == PackageReason::Explicit {
-                    let (_, sync_pkg) = db_with_pkg(&handle, local_pkg);
-                    let local_info = PackageInfo::from(&local_pkg);
-                    let sync_info = decode_keyid(
-                        &handle,
-                        PackageInfo::from(&sync_pkg)
-                    );
-                    return Some(add_local_info(local_info, sync_info));
-                    // return Some(add_sync_info(local_info, sync_info));
+                    return Some(local_pkg_with_sync_info(&handle, local_pkg));
                 }
                 return None;
-            }
-        )
-    );
+            },
+            _ => |_, pkg| Some(PackageInfo::from(&pkg)),
+        };
 
-    let json = serde_json::to_string(&explicits)
+    let all_packages: Vec<PackageInfo<'_>> = db_list
+        .iter()
+        .map(|db| {
+            db.pkgs()
+                .iter()
+                .filter_map(|pkg| pkg_filter_map(&handle, pkg))
+                .collect::<Vec<_>>()
+        })
+        .flatten()
+        .collect::<Vec<_>>(); // flattened list of packages
+
+    let json = serde_json::to_string(&all_packages)
         .expect("failed serializing json");
     println!("{}", json);
 
