@@ -3,7 +3,7 @@
 
 use alpm::{decode_signature, Alpm, AlpmList, AlpmListMut, Dep, IntoAlpmListItem, Package};
 use serde::{Serialize, Serializer};
-use std::fmt;
+use std::{borrow::Cow, fmt};
 
 /// Formats an object to String with its Debug info
 fn debug_format<T: fmt::Debug>(object: T) -> String {
@@ -28,8 +28,8 @@ pub struct PackageInfo<'h> {
     provides: Vec<DepInfo<'h>>,
     depends_on: Vec<DepInfo<'h>>,
     optional_deps: Vec<DepInfo<'h>>,
-    required_by: Vec<String>,
-    optional_for: Vec<String>,
+    required_by: Cow<'h, [String]>,
+    optional_for: Cow<'h, [String]>,
     conflicts_with: Vec<DepInfo<'h>>,
     replaces: Vec<DepInfo<'h>>,
     /// `download_size` and `compressed_size` are the same;
@@ -177,7 +177,7 @@ where
 }
 
 /// Converts [`PacListMut<String>`] to a vec for easy serialization
-impl From<PacListMut<'_, String>> for Vec<String> {
+impl From<PacListMut<'_, String>> for Cow<'_, [String]> {
     fn from(wrapper: PacListMut<'_, String>) -> Self {
         wrapper.0.into_iter().collect()
     }
