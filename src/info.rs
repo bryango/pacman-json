@@ -48,6 +48,7 @@ pub struct PackageInfo<'h> {
     /// with the [`Alpm`] handle with the [`decode_keyid`] function.
     key_id: Option<Vec<String>>,
     validated_by: String,
+    sync_with: Option<Box<PackageInfo<'h>>>,
 }
 
 impl<'h> From<&Package<'h>> for PackageInfo<'h> {
@@ -82,6 +83,7 @@ impl<'h> From<&Package<'h>> for PackageInfo<'h> {
             signatures: pkg.base64_sig(),
             key_id: None,
             validated_by: debug_format(pkg.validation()),
+            sync_with: None
         }
     }
 }
@@ -134,7 +136,7 @@ pub fn add_sync_info<'h>(
     sync_info: PackageInfo<'h>,
 ) -> PackageInfo<'h> {
     PackageInfo {
-        repository: sync_info.repository,
+        sync_with: Some(Box::new(sync_info)),
         ..local_info
     }
 }
@@ -144,10 +146,12 @@ pub fn add_local_info<'h>(
     local_info: PackageInfo<'h>,
     sync_info: PackageInfo<'h>,
 ) -> PackageInfo<'h> {
+    let reason = local_info.install_reason.clone(); // otherwise partial move
     PackageInfo {
         install_date: local_info.install_date,
-        install_reason: local_info.install_reason,
+        install_reason: reason,
         install_script: local_info.install_script,
+        sync_with: Some(Box::new(local_info)),
         ..sync_info
     }
 }
