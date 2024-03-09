@@ -1,41 +1,18 @@
-use alpm::Alpm;
+use alpm::{Alpm, AlpmList, Dep, Package};
 use std::collections::{HashMap, HashSet};
 
 /// Retrieves a HashMap of all reverse dependencies. This function is ported
 /// from: https://github.com/jelly/pacquery.
-fn get_reverse_deps_map(pacman: &Alpm) -> HashMap<String, HashSet<String>> {
+pub fn get_reverse_deps_map(
+    handle: &Alpm,
+    get_dependencies: fn(Package) -> AlpmList<Dep>,
+) -> HashMap<String, HashSet<String>> {
     let mut reverse_deps: HashMap<String, HashSet<String>> = HashMap::new();
-    let dbs = pacman.syncdbs();
+    let dbs = handle.syncdbs();
 
     for db in dbs {
         for pkg in db.pkgs() {
-            for dep in pkg.depends() {
-                reverse_deps
-                    .entry(dep.name().to_string())
-                    .and_modify(|e| {
-                        e.insert(pkg.name().to_string());
-                    })
-                    .or_insert_with(|| {
-                        let mut modify = HashSet::new();
-                        modify.insert(pkg.name().to_string());
-                        modify
-                    });
-            }
-
-            for dep in pkg.makedepends() {
-                reverse_deps
-                    .entry(dep.name().to_string())
-                    .and_modify(|e| {
-                        e.insert(pkg.name().to_string());
-                    })
-                    .or_insert_with(|| {
-                        let mut modify = HashSet::new();
-                        modify.insert(pkg.name().to_string());
-                        modify
-                    });
-            }
-
-            for dep in pkg.checkdepends() {
+            for dep in get_dependencies(pkg) {
                 reverse_deps
                     .entry(dep.name().to_string())
                     .and_modify(|e| {
@@ -51,4 +28,23 @@ fn get_reverse_deps_map(pacman: &Alpm) -> HashMap<String, HashSet<String>> {
     }
 
     reverse_deps
+}
+
+pub struct ReverseDependencies {
+    pub optional_for: HashMap<String, HashSet<String>>,
+    pub required_by: HashMap<String, HashSet<String>>,
+    pub required_by_make: HashMap<String, HashSet<String>>,
+    pub required_by_check: HashMap<String, HashSet<String>>,
+}
+
+impl From<&Alpm> for ReverseDependencies {
+    fn from(handle: &Alpm) -> Self {
+        let get = |f| get_reverse_deps_map(&handle, f);
+        Self {
+            optional_for: get(|pkg| pkg.optdepends()),
+            required_by: get(|pkg| pkg.depends()),
+            required_by_make: get(|pkg| pkg.makedepends()),
+            required_by_check: get(|pkg| pkg.checkdepends()),
+        }
+    }
 }

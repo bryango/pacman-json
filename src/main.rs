@@ -4,6 +4,7 @@ mod reverse_deps;
 
 use crate::info::{add_local_info, add_sync_info, decode_keyid, PackageInfo};
 use crate::siglevel::{default_siglevel, read_conf, repo_siglevel};
+use crate::reverse_deps::ReverseDependencies;
 
 use alpm::{Alpm, Package, PackageReason};
 
@@ -124,6 +125,10 @@ fn main() {
         eprintln!("{repo}: SigLevel::{sig_level:?}");
     }
     eprintln!("");
+
+    eprintln!("# generating reverse dependencies ...");
+    let reverse_deps = ReverseDependencies::from(&handle);
+    eprintln!("# done. Required-by pkgs: {}", reverse_deps.required_by.len());
 
     let pkg_filters = PackageFilters {
         sync: true,
