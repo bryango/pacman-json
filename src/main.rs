@@ -1,66 +1,102 @@
 mod info;
 mod siglevel;
 
-#[allow(unused_imports)]
 use crate::info::{add_local_info, add_sync_info, decode_keyid, PackageInfo};
 use crate::siglevel::{default_siglevel, read_conf, repo_siglevel};
 
-use alpm::{Alpm, Db, Package, PackageReason};
+use alpm::{Alpm, Package, PackageReason};
 
-/// Locates a Package from the databases by its name, prioritizing packages
-/// from the sync database. The returned package must have the same packager
-/// as the input package. The function panics if the package is not found in
-/// the sync database nor in the local database.
-fn db_with_pkg<'a>(handle: &'a Alpm, package: Package) -> Result<(Db<'a>, Package<'a>), String> {
+/// Locates a Package from the sync databases by its name.
+fn find_in_syncdb<'a>(handle: &'a Alpm, package: Package) -> Result<Package<'a>, String> {
     // https://github.com/archlinux/alpm.rs/blob/master/alpm/examples/packages.rs
     // dump_pkg_search, print_installed: https://gitlab.archlinux.org/pacman/pacman/-/blob/master/src/pacman/package.c
     // display, filter, pkg_get_locality: https://gitlab.archlinux.org/pacman/pacman/-/blob/master/src/pacman/query.c
 
-    let find_in_db = |db: Db<'a>| {
-        // look for a package by name in a database; the database is
-        // implemented as a hashmap so this is faster than iterating:
-        if let Ok(pkg) = db.pkg(package.name()) {
-            // verify that they share the same packager; we do not check
-            // `version`, because the `local` version could be outdated
-            if pkg.packager() == package.packager() {
-                // ^ Deref coercion for method call: Package -> Pkg
-                return Some(pkg);
-            }
-        }
-        return None;
-    };
-
     // iterate through each database
     for db in handle.syncdbs() {
-        if let Some(pkg) = find_in_db(db) {
-            return Ok((db, pkg));
+        // look for a package by name in a database; the database is
+        // implemented as a hashmap so this is faster than iterating:
+        match db.pkg(package.name()) {
+            Ok(pkg) => return Ok(pkg),
+            Err(_) => {}
         }
     }
-
-    // otherwise, the package must be in the `local` database
-    if let Some(pkg) = find_in_db(handle.localdb()) {
-        return Ok((handle.localdb(), pkg));
-    }
-    Err(format!("{:?} not found in the databases", package))
+    Err(format!("{:?} not found in the sync databases", package))
 }
 
-/// Enriches local package with sync database information, if possible.
-/// If the sync database information is available, it will be used as the
-/// base package as it contains more information.
-fn local_pkg_with_sync_info<'a>(handle: &'a Alpm, local_pkg: Package<'a>) -> PackageInfo<'a> {
-    let local_info = PackageInfo::from(&local_pkg);
+/// Enriches package with sync & local database information, if desired and
+/// when possible. If the sync database information is available and accurate,
+/// it will be preferred as the base info since it contains more details.
+fn enrich_pkg_info<'a>(
+    handle: &'a Alpm,
+    pkg: Package<'a>,
+    pkg_filters: &PackageFilters,
+) -> PackageInfo<'a> {
+    let base_info = PackageInfo::from(&pkg);
 
-    let sync_pkg = match db_with_pkg(&handle, local_pkg) {
+    if pkg_filters.sync {
+        let sync_pkg = pkg;
+        let sync_info = decode_keyid(&handle, base_info);
+        if pkg_filters.plain {
+            return sync_info;
+        }
+        match handle.localdb().pkg(sync_pkg.name()) {
+            Err(_) => return sync_info,
+            Ok(local_pkg) => {
+                let local_info = PackageInfo::from(&local_pkg);
+                return add_local_info(local_info, sync_info);
+            }
+        };
+    }
+
+    // otherwise, the input `pkg` is local:
+    let local_pkg = pkg;
+    let local_info = base_info;
+    let sync_pkg = match find_in_syncdb(&handle, local_pkg) {
         Err(msg) => {
             eprintln!("{}", msg);
             return local_info;
         }
-        Ok((_, x)) => x,
+        Ok(x) => x,
     };
-
     let sync_info = decode_keyid(&handle, PackageInfo::from(&sync_pkg));
-    return add_local_info(local_info, sync_info);
-    // return add_sync_info(local_info, sync_info); // alternatively
+
+    return match pkg_filters.plain
+        || local_pkg.packager() != sync_pkg.packager()
+        || local_pkg.version() != sync_pkg.version()
+    {
+        true => add_sync_info(local_info, sync_info),
+        false => add_local_info(local_info, sync_info),
+    };
+}
+
+struct PackageFilters {
+    /// Query the sync databases. By default we only query the local database
+    /// with the currently installed packages.
+    sync: bool,
+
+    /// Query all packages, including those not explicitly installed.
+    /// By default only explicitly installed packages are shown.
+    all: bool,
+
+    /// Output package info from the current database only. By default we
+    /// enrich the output by combining information from both the local
+    /// and the sync databases.
+    plain: bool,
+}
+
+fn pkg_filter_map<'a>(
+    handle: &'a Alpm,
+    pkg: Package<'a>,
+    pkg_filters: &PackageFilters,
+) -> Option<PackageInfo<'a>> {
+    if !pkg_filters.all && pkg.reason() != PackageReason::Explicit {
+        return None;
+    }
+    if pkg_filters.plain {
+        return Some(PackageInfo::from(&pkg));
+    }
+    return Some(enrich_pkg_info(&handle, pkg, &pkg_filters));
 }
 
 /// Dumps json data of the explicitly installed pacman packages.
@@ -88,31 +124,24 @@ fn main() {
     }
     eprintln!("");
 
-    let db_type = "sync";
-    let db_list = match db_type {
-        "local" => vec![handle.localdb()],
-        "sync" => handle.syncdbs().iter().collect(),
-        _ => panic!("database type must be either \"local\" or \"sync\""),
+    let pkg_filters = PackageFilters {
+        sync: true,
+        all: true,
+        plain: false,
     };
 
-    let pkg_filters = "none";
-    let pkg_filter_map: for<'a> fn(&'a Alpm, Package<'a>) -> Option<PackageInfo<'a>> =
-        match pkg_filters {
-            "explicit" => |handle, local_pkg| {
-                if local_pkg.reason() == PackageReason::Explicit {
-                    return Some(local_pkg_with_sync_info(&handle, local_pkg));
-                }
-                return None;
-            },
-            _ => |_, pkg| Some(PackageInfo::from(&pkg)),
-        };
+    let db_list = if pkg_filters.sync {
+        handle.syncdbs().iter().collect()
+    } else {
+        vec![handle.localdb()]
+    };
 
     let all_packages: Vec<PackageInfo<'_>> = db_list
         .iter()
         .map(|db| {
             db.pkgs()
                 .iter()
-                .filter_map(|pkg| pkg_filter_map(&handle, pkg))
+                .filter_map(|pkg| pkg_filter_map(&handle, pkg, &pkg_filters))
                 .collect::<Vec<_>>()
         })
         .flatten()

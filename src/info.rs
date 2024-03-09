@@ -130,7 +130,6 @@ pub fn decode_keyid<'h>(handle: &'h Alpm, pkg_info: PackageInfo<'h>) -> PackageI
 }
 
 /// Adds sync database info to the local package
-#[allow(dead_code)]
 pub fn add_sync_info<'h>(
     local_info: PackageInfo<'h>,
     sync_info: PackageInfo<'h>,
