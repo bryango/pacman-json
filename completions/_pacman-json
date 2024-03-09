@@ -1,0 +1,36 @@
+#compdef pacman-json
+
+autoload -U is-at-least
+
+_pacman-json() {
+    typeset -A opt_args
+    typeset -a _arguments_options
+    local ret=1
+
+    if is-at-least 5.2; then
+        _arguments_options=(-s -S -C)
+    else
+        _arguments_options=(-s -C)
+    fi
+
+    local context curcontext="$curcontext" state line
+    _arguments "${_arguments_options[@]}" \
+'--sync[Query the sync databases; by default we only query the local database with the currently installed packages]' \
+'--all[Query all packages, including those not explicitly installed; by default only explicitly installed packages are shown]' \
+'--plain[Output package info from the current database only; by default we enrich the output by combining information from both the local and the sync databases]' \
+'-h[Print help]' \
+'--help[Print help]' \
+&& ret=0
+}
+
+(( $+functions[_pacman-json_commands] )) ||
+_pacman-json_commands() {
+    local commands; commands=()
+    _describe -t commands 'pacman-json commands' commands "$@"
+}
+
+if [ "$funcstack[1]" = "_pacman-json" ]; then
+    _pacman-json "$@"
+else
+    compdef _pacman-json pacman-json
+fi
