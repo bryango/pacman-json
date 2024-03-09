@@ -11,10 +11,15 @@ license-file = "LICENSE"
 edition = "2021"
 default-run = "pacman-json"
 
+[[bin]]
+name = "pacman-json-completions"
+path = "src/completions.rs"
+
 ## https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
 alpm = "2.2.2"
+anyhow = "1.0.80"
 clap = { version = "4.5.2", features = ["derive"] }
 clap_complete = "4.5.1"
 serde = { version = "1.0.180", features = ["derive"] }

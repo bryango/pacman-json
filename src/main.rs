@@ -8,6 +8,7 @@ use crate::siglevel::{default_siglevel, read_conf, repo_siglevel};
 
 use alpm::{Alpm, Package, PackageReason};
 use clap::Parser;
+use pacman_json::PackageFilters;
 
 /// Locates a Package from the sync databases by its name.
 fn find_in_syncdb<'a>(handle: &'a Alpm, package: Package) -> Result<Package<'a>, String> {
@@ -71,26 +72,6 @@ fn enrich_pkg_info<'a>(
         true => add_sync_info(local_info, sync_info),
         false => add_local_info(local_info, sync_info),
     };
-}
-
-#[derive(Debug, Parser)]
-#[command(about)]
-struct PackageFilters {
-    /// Query the sync databases; by default we only query the local database
-    /// with the currently installed packages.
-    #[arg(long)]
-    sync: bool,
-
-    /// Query all packages, including those not explicitly installed;
-    /// by default only explicitly installed packages are shown
-    #[arg(long)]
-    all: bool,
-
-    /// Output package info from the current database only; by default we
-    /// enrich the output by combining information from both the local
-    /// and the sync databases
-    #[arg(long)]
-    plain: bool,
 }
 
 fn pkg_filter_map<'a>(
