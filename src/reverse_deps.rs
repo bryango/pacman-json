@@ -1,13 +1,15 @@
 use alpm::{Alpm, AlpmList, Dep, Package};
 use std::collections::{HashMap, HashSet};
 
+type RevDepsMap = HashMap<String, HashSet<String>>;
+
 /// Retrieves a HashMap of all reverse dependencies. This function is ported
 /// from: https://github.com/jelly/pacquery.
 pub fn get_reverse_deps_map(
     handle: &Alpm,
     get_dependencies: fn(Package) -> AlpmList<Dep>,
-) -> HashMap<String, HashSet<String>> {
-    let mut reverse_deps: HashMap<String, HashSet<String>> = HashMap::new();
+) -> RevDepsMap {
+    let mut reverse_deps: RevDepsMap = HashMap::new();
     let dbs = handle.syncdbs();
 
     for db in dbs {
@@ -30,14 +32,14 @@ pub fn get_reverse_deps_map(
     reverse_deps
 }
 
-pub struct ReverseDependencies {
-    pub optional_for: HashMap<String, HashSet<String>>,
-    pub required_by: HashMap<String, HashSet<String>>,
-    pub required_by_make: HashMap<String, HashSet<String>>,
-    pub required_by_check: HashMap<String, HashSet<String>>,
+pub struct ReverseDependencyMaps {
+    pub optional_for: RevDepsMap,
+    pub required_by: RevDepsMap,
+    pub required_by_make: RevDepsMap,
+    pub required_by_check: RevDepsMap,
 }
 
-impl From<&Alpm> for ReverseDependencies {
+impl From<&Alpm> for ReverseDependencyMaps {
     fn from(handle: &Alpm) -> Self {
         let get = |f| get_reverse_deps_map(&handle, f);
         Self {

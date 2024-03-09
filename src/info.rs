@@ -3,7 +3,9 @@
 
 use alpm::{decode_signature, Alpm, AlpmList, AlpmListMut, Dep, IntoAlpmListItem, Package};
 use serde::{Serialize, Serializer};
-use std::{borrow::Cow, fmt};
+use std::{borrow::Cow, collections::HashSet, fmt};
+
+use crate::reverse_deps::ReverseDependencyMaps;
 
 /// Formats an object to String with its Debug info
 fn debug_format<T: fmt::Debug>(object: T) -> String {
@@ -28,10 +30,19 @@ pub struct PackageInfo<'h> {
     provides: Vec<DepInfo<'h>>,
     depends_on: Vec<DepInfo<'h>>,
     optional_deps: Vec<DepInfo<'h>>,
-    required_by: Cow<'h, [Cow<'h, str>]>,
-    optional_for: Cow<'h, [Cow<'h, str>]>,
+    makedepends: Vec<DepInfo<'h>>,
+    checkdepends: Vec<DepInfo<'h>>,
+
+    /// [`PackageInfo::required_by`] and similarly, `optional_for`,
+    /// and `required_by_{make,check}` are reverse dependencies; they are
+    /// computed on demand with the [`add_reverse_deps`] function.
+    required_by: HashSet<String>,
+    optional_for: HashSet<String>,
+    required_by_make: HashSet<String>,
+    required_by_check: HashSet<String>,
     conflicts_with: Vec<DepInfo<'h>>,
     replaces: Vec<DepInfo<'h>>,
+
     /// `download_size` and `compressed_size` are the same;
     /// both are `alpm_pkg_get_size` so we implement only one of them.
     download_size: i64,
@@ -44,6 +55,7 @@ pub struct PackageInfo<'h> {
     md5_sum: Option<&'h str>,
     sha_256_sum: Option<&'h str>,
     signatures: Option<&'h str>,
+
     /// `key_id` is set to None when initialized; it can be decoded on-demand
     /// with the [`Alpm`] handle with the [`decode_keyid`] function.
     key_id: Option<Vec<String>>,
@@ -53,11 +65,14 @@ pub struct PackageInfo<'h> {
 
 impl<'h> From<&Package<'h>> for PackageInfo<'h> {
     fn from(pkg: &Package<'h>) -> PackageInfo<'h> {
-        eprintln!("pkg: {}", pkg.name());
+        let db = pkg.db().map(|db| db.name());
+        let name = pkg.name();
+        // eprintln!("{:?}: {}", db, name);
+
         Self {
             // package: *pkg,
-            repository: pkg.db().map(|db| db.name()),
-            name: pkg.name(),
+            repository: db,
+            name: name,
             version: pkg.version(),
             description: pkg.desc(),
             architecture: pkg.arch(),
@@ -67,8 +82,12 @@ impl<'h> From<&Package<'h>> for PackageInfo<'h> {
             provides: PacList(pkg.provides()).into(),
             depends_on: PacList(pkg.depends()).into(),
             optional_deps: PacList(pkg.optdepends()).into(),
-            required_by: PacListMut(pkg.required_by()).into(),
-            optional_for: PacListMut(pkg.optional_for()).into(),
+            makedepends: PacList(pkg.makedepends()).into(),
+            checkdepends: PacList(pkg.checkdepends()).into(),
+            required_by: [].into(),
+            optional_for: [].into(),
+            required_by_make: [].into(),
+            required_by_check: [].into(),
             conflicts_with: PacList(pkg.conflicts()).into(),
             replaces: PacList(pkg.replaces()).into(),
             download_size: pkg.size(),
@@ -83,7 +102,7 @@ impl<'h> From<&Package<'h>> for PackageInfo<'h> {
             signatures: pkg.base64_sig(),
             key_id: None,
             validated_by: debug_format(pkg.validation()),
-            sync_with: None
+            sync_with: None,
         }
     }
 }
@@ -152,6 +171,23 @@ pub fn add_local_info<'h>(
         install_script: local_info.install_script,
         sync_with: Some(Box::new(local_info)),
         ..sync_info
+    }
+}
+
+/// Adds reverse dependencies info
+pub fn add_reverse_deps<'h>(
+    pkg_info: PackageInfo<'h>,
+    reverse_deps: &'h ReverseDependencyMaps,
+) -> PackageInfo<'h> {
+    let get = |pkg_name| {
+        reverse_deps
+            .required_by
+            .get(pkg_name)
+            .map_or(HashSet::new(), |x| x.to_owned())
+    };
+    PackageInfo {
+        required_by: get(pkg_info.name),
+        ..pkg_info
     }
 }
 
