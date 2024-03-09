@@ -7,6 +7,7 @@ use crate::reverse_deps::ReverseDependencyMaps;
 use crate::siglevel::{default_siglevel, read_conf, repo_siglevel};
 
 use alpm::{Alpm, Package, PackageReason};
+use clap::Parser;
 
 /// Locates a Package from the sync databases by its name.
 fn find_in_syncdb<'a>(handle: &'a Alpm, package: Package) -> Result<Package<'a>, String> {
@@ -72,18 +73,23 @@ fn enrich_pkg_info<'a>(
     };
 }
 
+#[derive(Debug, Parser)]
+#[command(about)]
 struct PackageFilters {
-    /// Query the sync databases. By default we only query the local database
+    /// Query the sync databases; by default we only query the local database
     /// with the currently installed packages.
+    #[arg(long)]
     sync: bool,
 
-    /// Query all packages, including those not explicitly installed.
-    /// By default only explicitly installed packages are shown.
+    /// Query all packages, including those not explicitly installed;
+    /// by default only explicitly installed packages are shown
+    #[arg(long)]
     all: bool,
 
-    /// Output package info from the current database only. By default we
+    /// Output package info from the current database only; by default we
     /// enrich the output by combining information from both the local
-    /// and the sync databases.
+    /// and the sync databases
+    #[arg(long)]
     plain: bool,
 }
 
@@ -105,6 +111,8 @@ fn pkg_filter_map<'a>(
 /// Local packages are matched against the sync databases,
 /// and upstream info is added to the output.
 fn main() {
+    let pkg_filters = PackageFilters::parse();
+
     let root = read_conf(["RootDir"]);
     let db_path = read_conf(["DBPath"]);
     let all_repos = read_conf(["--repo-list"]);
@@ -133,12 +141,6 @@ fn main() {
         reverse_deps.required_by.len()
     );
     eprintln!("");
-
-    let pkg_filters = PackageFilters {
-        sync: true,
-        all: true,
-        plain: false,
-    };
 
     let db_list = if pkg_filters.sync {
         handle.syncdbs().iter().collect()
