@@ -1,7 +1,7 @@
 //! This produces a binary that generates completions for `pacman-json` at the
 //! current working directory.
 //!
-//! This is stolen from https://github.com/jelly/pacquery.
+//! This is also stolen from <https://github.com/jelly/pacquery>.
 
 use clap::{CommandFactory, ValueEnum};
 use clap_complete::Shell;

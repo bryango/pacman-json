@@ -9,13 +9,13 @@ pub struct PackageFilters {
     pub sync: bool,
 
     /// Query all packages, including those not explicitly installed;
-    /// by default only explicitly installed packages are shown
+    /// by default only explicitly installed packages are shown.
     #[arg(long)]
     pub all: bool,
 
     /// Output package info from the current database only; by default we
     /// enrich the output by combining information from both the local
-    /// and the sync databases
+    /// and the sync databases.
     #[arg(long)]
     pub plain: bool,
 }
