@@ -63,17 +63,17 @@ fn recurse_siglevels(siglevels: String, original: SigLevel) -> SigLevel {
     for level in siglevels.split_terminator('\n') {
         sig_level = update_siglevel(level, sig_level)
     }
-    return sig_level;
+    sig_level
 }
 
 /// Finds the default SigLevel from `pacman.conf`
 pub fn default_siglevel() -> SigLevel {
     let siglevels = read_conf(["SigLevel"]);
-    return recurse_siglevels(siglevels, SigLevel::USE_DEFAULT);
+    recurse_siglevels(siglevels, SigLevel::USE_DEFAULT)
 }
 
 /// Finds the SigLevel of a repo
 pub fn repo_siglevel(repo: &str, default: SigLevel) -> SigLevel {
     let siglevels = read_conf(["--repo=", &repo, "SigLevel"]);
-    return recurse_siglevels(siglevels, default);
+    recurse_siglevels(siglevels, default)
 }

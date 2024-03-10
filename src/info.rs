@@ -14,6 +14,8 @@ fn debug_format<T: fmt::Debug>(object: T) -> String {
 
 // dump_pkg_full: https://gitlab.archlinux.org/pacman/pacman/-/blob/master/src/pacman/package.c
 
+/// This is a wrapper of the relevant information of a pacman [`Package`]
+/// for ease of serialization by [`serde`].
 #[derive(Serialize)]
 pub struct PackageInfo<'h> {
     // #[allow(dead_code)]
@@ -64,6 +66,8 @@ pub struct PackageInfo<'h> {
 }
 
 impl<'h> From<&Package<'h>> for PackageInfo<'h> {
+    /// Converts an alpm [`Package`] to a [`PackageInfo`] containing the
+    /// relevant information, to be serialized.
     fn from(pkg: &Package<'h>) -> PackageInfo<'h> {
         let db = pkg.db().map(|db| db.name());
         let name = pkg.name();

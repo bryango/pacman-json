@@ -11,7 +11,7 @@
 //! single package query but undesirable if we would like to dump the whole
 //! database; thus the reimplementation.
 //!
-//! See `alpm_sys::ffi::alpm_pkg_compute_requiredby()`.
+//! See e.g. `alpm_sys::ffi::alpm_pkg_compute_requiredby()`.
 
 use alpm::{Alpm, AlpmList, Dep, Package};
 use std::collections::{HashMap, HashSet};
@@ -57,10 +57,10 @@ pub struct ReverseDependencyMaps {
     pub required_by_check: RevDepsMap,
 }
 
-/// Generates the full complete reverse dependencies maps from the [`Alpm`]
-/// database handle. This is only constructed once after the database is fully
-/// initialized.
 impl From<&Alpm> for ReverseDependencyMaps {
+    /// Generates the full complete reverse dependencies maps from the [`Alpm`]
+    /// database handle. This is only constructed once after the database is
+    /// fully initialized.
     fn from(handle: &Alpm) -> Self {
         let get = |f| get_reverse_deps_map(&handle, f);
         Self {
