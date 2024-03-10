@@ -1,8 +1,8 @@
-#compdef pacman-json
+#compdef pacjump
 
 autoload -U is-at-least
 
-_pacman-json() {
+_pacjump() {
     typeset -A opt_args
     typeset -a _arguments_options
     local ret=1
@@ -23,14 +23,14 @@ _pacman-json() {
 && ret=0
 }
 
-(( $+functions[_pacman-json_commands] )) ||
-_pacman-json_commands() {
+(( $+functions[_pacjump_commands] )) ||
+_pacjump_commands() {
     local commands; commands=()
-    _describe -t commands 'pacman-json commands' commands "$@"
+    _describe -t commands 'pacjump commands' commands "$@"
 }
 
-if [ "$funcstack[1]" = "_pacman-json" ]; then
-    _pacman-json "$@"
+if [ "$funcstack[1]" = "_pacjump" ]; then
+    _pacjump "$@"
 else
-    compdef _pacman-json pacman-json
+    compdef _pacjump pacjump
 fi

@@ -2,12 +2,12 @@
 using namespace System.Management.Automation
 using namespace System.Management.Automation.Language
 
-Register-ArgumentCompleter -Native -CommandName 'pacman-json' -ScriptBlock {
+Register-ArgumentCompleter -Native -CommandName 'pacjump' -ScriptBlock {
     param($wordToComplete, $commandAst, $cursorPosition)
 
     $commandElements = $commandAst.CommandElements
     $command = @(
-        'pacman-json'
+        'pacjump'
         for ($i = 1; $i -lt $commandElements.Count; $i++) {
             $element = $commandElements[$i]
             if ($element -isnot [StringConstantExpressionAst] -or
@@ -20,7 +20,7 @@ Register-ArgumentCompleter -Native -CommandName 'pacman-json' -ScriptBlock {
     }) -join ';'
 
     $completions = @(switch ($command) {
-        'pacman-json' {
+        'pacjump' {
             [CompletionResult]::new('--sync', 'sync', [CompletionResultType]::ParameterName, 'Query the sync databases; by default we only query the local database with the currently installed packages')
             [CompletionResult]::new('--all', 'all', [CompletionResultType]::ParameterName, 'Query all packages, including those not explicitly installed; by default only explicitly installed packages are shown')
             [CompletionResult]::new('--plain', 'plain', [CompletionResultType]::ParameterName, 'Output package info from the current database only; by default we enrich the output by combining information from both the local and the sync databases')

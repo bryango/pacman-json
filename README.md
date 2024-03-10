@@ -1,16 +1,19 @@
-# pacman-json
-Dump pacman packages information in JSON.
+# pacjump
+**pac**man **j**son **dump**: dump pacman packages information in JSON.
 
 This package focuses on the local pacman database, yet it borrows some key
 ingredients from https://github.com/jelly/pacquery which focuses more on the
 sync databases.
+
+> Note: this package used to have the name `pacman-json`, but it was renamed
+> for version 0.2.1 to avoid sounding too official.
 
 ## usage
 
 By default, dump explicitly installed packages info:
 
 ```bash
-pacman-json > pacman-explicits.json
+pacjump > pacman-explicits.json
 ```
 
 One can then process the resulting JSON with `jq`, e.g. get the subset of
@@ -26,6 +29,6 @@ cat pacman-explicits.json | jq --raw-output '
 '
 ```
 
-Additional options can be found with `pacman-json --help`. Shell completions
+Additional options can be found with `pacjump --help`. Shell completions
 generated from [**./src/completions.rs**](./src/completions.rs) are provided
 under [**./completions/**](./completions/).

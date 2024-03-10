@@ -1,7 +1,7 @@
-use pacman_json::info::{add_reverse_deps, PackageInfo};
-use pacman_json::reverse_deps::ReverseDependencyMaps;
-use pacman_json::siglevel::{default_siglevel, read_conf, repo_siglevel};
-use pacman_json::{pkg_filter_map, PackageFilters};
+use pacjump::info::{add_reverse_deps, PackageInfo};
+use pacjump::reverse_deps::ReverseDependencyMaps;
+use pacjump::siglevel::{default_siglevel, read_conf, repo_siglevel};
+use pacjump::{pkg_filter_map, PackageFilters};
 
 use alpm::Alpm;
 use clap::Parser;

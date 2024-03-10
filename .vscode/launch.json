@@ -7,15 +7,15 @@
         {
             "type": "lldb",
             "request": "launch",
-            "name": "Debug executable 'pacman-json'",
+            "name": "Debug executable 'pacjump'",
             "cargo": {
                 "args": [
                     "build",
-                    "--bin=pacman-json",
-                    "--package=pacman-json"
+                    "--bin=pacjump",
+                    "--package=pacjump"
                 ],
                 "filter": {
-                    "name": "pacman-json",
+                    "name": "pacjump",
                     "kind": "bin"
                 }
             },
@@ -25,16 +25,16 @@
         {
             "type": "lldb",
             "request": "launch",
-            "name": "Debug unit tests in executable 'pacman-json'",
+            "name": "Debug unit tests in executable 'pacjump'",
             "cargo": {
                 "args": [
                     "test",
                     "--no-run",
-                    "--bin=pacman-json",
-                    "--package=pacman-json"
+                    "--bin=pacjump",
+                    "--package=pacjump"
                 ],
                 "filter": {
-                    "name": "pacman-json",
+                    "name": "pacjump",
                     "kind": "bin"
                 }
             },

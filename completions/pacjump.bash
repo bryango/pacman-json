@@ -1,4 +1,4 @@
-_pacman-json() {
+_pacjump() {
     local i cur prev opts cmd
     COMPREPLY=()
     cur="${COMP_WORDS[COMP_CWORD]}"
@@ -10,7 +10,7 @@ _pacman-json() {
     do
         case "${cmd},${i}" in
             ",$1")
-                cmd="pacman__json"
+                cmd="pacjump"
                 ;;
             *)
                 ;;
@@ -18,7 +18,7 @@ _pacman-json() {
     done
 
     case "${cmd}" in
-        pacman__json)
+        pacjump)
             opts="-h --sync --all --plain --help"
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 1 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
@@ -36,7 +36,7 @@ _pacman-json() {
 }
 
 if [[ "${BASH_VERSINFO[0]}" -eq 4 && "${BASH_VERSINFO[1]}" -ge 4 || "${BASH_VERSINFO[0]}" -gt 4 ]]; then
-    complete -F _pacman-json -o nosort -o bashdefault -o default pacman-json
+    complete -F _pacjump -o nosort -o bashdefault -o default pacjump
 else
-    complete -F _pacman-json -o bashdefault -o default pacman-json
+    complete -F _pacjump -o bashdefault -o default pacjump
 fi

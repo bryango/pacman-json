@@ -1,6 +1,6 @@
 [package]
-name = "pacman-json"
-version = "0.2.0"
+name = "pacjump"
+version = "0.2.1"
 description = "Dump pacman packages information in JSON"
 documentation = "https://github.com/bryango/pacman-json"
 authors = ["Bryan Lai <bryanlais@gmail.com>"]
@@ -9,10 +9,10 @@ categories = ["command-line-utilities"]
 readme = "README.md"
 license-file = "LICENSE"
 edition = "2021"
-default-run = "pacman-json"
+default-run = "pacjump"
 
 [[bin]]
-name = "pacman-json-completions"
+name = "pacjump-completions"
 path = "src/completions.rs"
 
 ## https://doc.rust-lang.org/cargo/reference/manifest.html
