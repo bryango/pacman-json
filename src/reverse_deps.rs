@@ -1,6 +1,23 @@
+//! This module generates different kinds of reverse dependencies from pacman
+//! sync databases and gathers them in a big [`HashMap`]. The key ingredient,
+//! [`get_reverse_deps_map`], is stolen from https://github.com/jelly/pacquery.
+//!
+//! Note that [`alpm::Package`] does provide reverse dependency information
+//! through e.g. [`alpm::Pkg::required_by()`] but it is very slow to enumerate
+//! them, possibly due to the mutable data structure [`alpm::AlpmListMut`].
+//! Their implementation is hidden in C, but it seems likely that the reverse
+//! dependencies are computed on the fly, by enumerating through the whole
+//! database for every package when it is called. This is reasonable for a
+//! single package query but undesirable if we would like to dump the whole
+//! database; thus the reimplementation.
+//!
+//! See `alpm_sys::ffi::alpm_pkg_compute_requiredby()`.
+
 use alpm::{Alpm, AlpmList, Dep, Package};
 use std::collections::{HashMap, HashSet};
 
+/// A map of reverse dependencies, from a package's name to the names of
+/// packages that are dependent on it.
 pub type RevDepsMap = HashMap<String, HashSet<String>>;
 
 /// Retrieves a HashMap of all reverse dependencies. This function is ported
@@ -32,6 +49,7 @@ pub fn get_reverse_deps_map(
     reverse_deps
 }
 
+/// A collection of all different kinds of reverse dependencies maps.
 pub struct ReverseDependencyMaps {
     pub optional_for: RevDepsMap,
     pub required_by: RevDepsMap,
@@ -39,6 +57,9 @@ pub struct ReverseDependencyMaps {
     pub required_by_check: RevDepsMap,
 }
 
+/// Generates the full complete reverse dependencies maps from the [`Alpm`]
+/// database handle. This is only constructed once after the database is fully
+/// initialized.
 impl From<&Alpm> for ReverseDependencyMaps {
     fn from(handle: &Alpm) -> Self {
         let get = |f| get_reverse_deps_map(&handle, f);
