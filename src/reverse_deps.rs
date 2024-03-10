@@ -1,7 +1,7 @@
 use alpm::{Alpm, AlpmList, Dep, Package};
 use std::collections::{HashMap, HashSet};
 
-type RevDepsMap = HashMap<String, HashSet<String>>;
+pub type RevDepsMap = HashMap<String, HashSet<String>>;
 
 /// Retrieves a HashMap of all reverse dependencies. This function is ported
 /// from: https://github.com/jelly/pacquery.

@@ -5,7 +5,7 @@ use alpm::{decode_signature, Alpm, AlpmList, AlpmListMut, Dep, IntoAlpmListItem,
 use serde::{Serialize, Serializer};
 use std::{borrow::Cow, collections::HashSet, fmt};
 
-use crate::reverse_deps::ReverseDependencyMaps;
+use crate::reverse_deps::{RevDepsMap, ReverseDependencyMaps};
 
 /// Formats an object to String with its Debug info
 fn debug_format<T: fmt::Debug>(object: T) -> String {
@@ -179,14 +179,16 @@ pub fn add_reverse_deps<'h>(
     pkg_info: PackageInfo<'h>,
     reverse_deps: &'h ReverseDependencyMaps,
 ) -> PackageInfo<'h> {
-    let get = |pkg_name| {
-        reverse_deps
-            .required_by
-            .get(pkg_name)
+    let get = |rev_deps_map: &RevDepsMap| {
+        rev_deps_map
+            .get(pkg_info.name)
             .map_or(HashSet::new(), |x| x.to_owned())
     };
     PackageInfo {
-        required_by: get(pkg_info.name),
+        required_by: get(&reverse_deps.required_by),
+        optional_for: get(&reverse_deps.optional_for),
+        required_by_make: get(&reverse_deps.required_by_make),
+        required_by_check: get(&reverse_deps.required_by_check),
         ..pkg_info
     }
 }
