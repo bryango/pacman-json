@@ -1,13 +1,13 @@
 //! This module defines the [`PackageInfo`] struct for serializing package
 //! information, including functions to encode and decode relevant data.
 
-use alpm::{decode_signature, Alpm, AlpmList, AlpmListMut, Dep, IntoAlpmListItem, Package};
+use alpm::{decode_signature, Alpm, AlpmList, Dep, IntoAlpmListItem, Package};
 use serde::{Serialize, Serializer};
-use std::{borrow::Cow, collections::HashSet, fmt};
+use std::{collections::HashSet, fmt};
 
 use crate::reverse_deps::{RevDepsMap, ReverseDependencyMaps};
 
-/// Formats an object to String with its Debug info
+/// Formats an object to String with its [`Debug`] info
 fn debug_format<T: fmt::Debug>(object: T) -> String {
     format!("{:?}", object)
 }
@@ -32,16 +32,16 @@ pub struct PackageInfo<'h> {
     optional_deps: Vec<DepInfo<'h>>,
     makedepends: Vec<DepInfo<'h>>,
     checkdepends: Vec<DepInfo<'h>>,
+    conflicts_with: Vec<DepInfo<'h>>,
+    replaces: Vec<DepInfo<'h>>,
 
-    /// [`PackageInfo::required_by`] and similarly, `optional_for`,
+    /// [`PackageInfo::required_by`] and similarly, `optional_for`
     /// and `required_by_{make,check}` are reverse dependencies; they are
     /// computed on demand with the [`add_reverse_deps`] function.
     required_by: HashSet<String>,
     optional_for: HashSet<String>,
     required_by_make: HashSet<String>,
     required_by_check: HashSet<String>,
-    conflicts_with: Vec<DepInfo<'h>>,
-    replaces: Vec<DepInfo<'h>>,
 
     /// `download_size` and `compressed_size` are the same;
     /// both are `alpm_pkg_get_size` so we implement only one of them.
@@ -199,9 +199,6 @@ pub fn add_reverse_deps<'h>(
 /// `impl Serialize for AlpmList` does not work due to rust "orphan rules";
 /// see e.g. https://github.com/Ixrec/rust-orphan-rules.
 struct PacList<'a, T>(AlpmList<'a, T>);
-struct PacListMut<'a, T>(AlpmListMut<'a, T>)
-where
-    for<'b> T: IntoAlpmListItem<'a, 'b>;
 
 impl<'a, T> Serialize for PacList<'a, T>
 where
@@ -214,13 +211,6 @@ where
     {
         let alpm_list = self.0;
         serializer.collect_seq(alpm_list.into_iter())
-    }
-}
-
-/// Converts [`PacListMut<String>`] to a vec for easy serialization
-impl<'h> From<PacListMut<'h, String>> for Cow<'h, [Cow<'h, str>]> {
-    fn from(wrapper: PacListMut<'h, String>) -> Self {
-        Cow::Owned(wrapper.0.into_iter().map(|x| Cow::Owned(x)).collect())
     }
 }
 
