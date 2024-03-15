@@ -3,7 +3,7 @@
 
 use alpm::{decode_signature, Alpm, AlpmList, Dep, IntoAlpmListItem, Package};
 use serde::{Serialize, Serializer};
-use std::{collections::HashSet, fmt};
+use std::{collections::HashSet, fmt::Debug};
 
 use crate::reverse_deps::{RevDepsMap, ReverseDependencyMaps};
 
@@ -11,18 +11,16 @@ trait DebugFormat {
     /// Formats an object to String with its [`Debug`] info
     fn format(&self) -> Box<str>
     where
-        Self: fmt::Debug,
+        Self: Debug,
     {
         format!("{:?}", self).into()
     }
 }
 
-// it seems that these implementations will be inlined in release mode. Nice!
-impl DebugFormat for alpm::PackageReason {}
-impl DebugFormat for alpm::PackageValidation {}
-impl DebugFormat for alpm::DepMod {}
-impl DebugFormat for alpm::Error {}
-impl DebugFormat for alpm::SignatureDecodeError {}
+/// Blanket implementation of [`DebugFormat`] for all types with [`Debug`].
+/// This is efficient, as it seems that the implementations for Enums will
+/// be inlined in release mode. Nice!
+impl<T: Debug> DebugFormat for T {}
 
 // dump_pkg_full: https://gitlab.archlinux.org/pacman/pacman/-/blob/master/src/pacman/package.c
 
