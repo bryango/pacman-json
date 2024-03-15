@@ -8,8 +8,8 @@ use std::{collections::HashSet, fmt};
 use crate::reverse_deps::{RevDepsMap, ReverseDependencyMaps};
 
 /// Formats an object to String with its [`Debug`] info
-fn debug_format<T: fmt::Debug>(object: T) -> String {
-    format!("{:?}", object)
+fn debug_format<T: fmt::Debug>(object: T) -> Box<str> {
+    format!("{:?}", object).into()
 }
 
 // dump_pkg_full: https://gitlab.archlinux.org/pacman/pacman/-/blob/master/src/pacman/package.c
@@ -52,7 +52,7 @@ pub struct PackageInfo<'h> {
     packager: Option<&'h str>,
     build_date: i64,
     install_date: Option<i64>,
-    install_reason: String,
+    install_reason: Box<str>,
     install_script: bool,
     md5_sum: Option<&'h str>,
     sha_256_sum: Option<&'h str>,
@@ -60,8 +60,8 @@ pub struct PackageInfo<'h> {
 
     /// `key_id` is set to None when initialized; it can be decoded on-demand
     /// with the [`Alpm`] handle with the [`decode_keyid`] function.
-    key_id: Option<Vec<String>>,
-    validated_by: String,
+    key_id: Option<Vec<Box<str>>>,
+    validated_by: Box<str>,
     sync_with: Option<Box<PackageInfo<'h>>>,
 }
 
@@ -114,7 +114,7 @@ impl<'h> From<&Package<'h>> for PackageInfo<'h> {
 #[derive(Serialize)]
 struct DepInfo<'h> {
     name: &'h str,
-    depmod: String,
+    depmod: Box<str>,
     version: Option<&'h str>,
     description: Option<&'h str>,
     name_hash: u64,
@@ -140,7 +140,7 @@ pub fn decode_keyid<'h>(handle: &'h Alpm, pkg_info: PackageInfo<'h>) -> PackageI
             handle
                 .extract_keyid(pkg_info.name, &decoded)
                 .map_err(debug_format)
-                .map(|x| x.into_iter().collect::<Vec<_>>())
+                .map(|x| x.into_iter().map(|x| x.into_boxed_str()).collect::<Vec<_>>())
                 .map_or_else(|err| vec![err], |res| res),
         )
     } else {
