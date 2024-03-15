@@ -39,13 +39,13 @@ pub struct PackageInfo<'h> {
     url: Option<&'h str>,
     licenses: PacList<'h, &'h str>,
     groups: PacList<'h, &'h str>,
-    provides: Vec<DepInfo<'h>>,
-    depends_on: Vec<DepInfo<'h>>,
-    optional_deps: Vec<DepInfo<'h>>,
-    makedepends: Vec<DepInfo<'h>>,
-    checkdepends: Vec<DepInfo<'h>>,
-    conflicts_with: Vec<DepInfo<'h>>,
-    replaces: Vec<DepInfo<'h>>,
+    provides: PacList<'h, Dep<'h>>,
+    depends_on: PacList<'h, Dep<'h>>,
+    optional_deps: PacList<'h, Dep<'h>>,
+    makedepends: PacList<'h, Dep<'h>>,
+    checkdepends: PacList<'h, Dep<'h>>,
+    conflicts_with: PacList<'h, Dep<'h>>,
+    replaces: PacList<'h, Dep<'h>>,
 
     /// [`PackageInfo::required_by`] and similarly, `optional_for`
     /// and `required_by_{make,check}` are reverse dependencies; they are
@@ -93,17 +93,17 @@ impl<'h> From<&Package<'h>> for PackageInfo<'h> {
             url: pkg.url(),
             licenses: pkg.licenses().into(),
             groups: pkg.groups().into(),
-            provides: PacList(pkg.provides()).into(),
-            depends_on: PacList(pkg.depends()).into(),
-            optional_deps: PacList(pkg.optdepends()).into(),
-            makedepends: PacList(pkg.makedepends()).into(),
-            checkdepends: PacList(pkg.checkdepends()).into(),
+            provides: pkg.provides().into(),
+            depends_on: pkg.depends().into(),
+            optional_deps: pkg.optdepends().into(),
+            makedepends: pkg.makedepends().into(),
+            checkdepends: pkg.checkdepends().into(),
             required_by: [].into(),
             optional_for: [].into(),
             required_by_make: [].into(),
             required_by_check: [].into(),
-            conflicts_with: PacList(pkg.conflicts()).into(),
-            replaces: PacList(pkg.replaces()).into(),
+            conflicts_with: pkg.conflicts().into(),
+            replaces: pkg.replaces().into(),
             download_size: pkg.size(),
             installed_size: pkg.isize(),
             packager: pkg.packager(),
@@ -222,9 +222,17 @@ impl<'a, T> From<AlpmList<'a, T>> for PacList<'a, T> {
     }
 }
 
+/// A marker trait to label generics that are _not_ [`alpm::Dep`] and can be
+/// directly serialized. [`alpm::Dep`] requires a separate implementation
+/// with special care.
+///
+/// This trick is taken from https://stackoverflow.com/a/66537661.
+trait NotAlpmDep {}
+impl NotAlpmDep for &str {}
+
 impl<'a, T> Serialize for PacList<'a, T>
 where
-    T: IntoAlpmListItem<'a, 'a>,
+    T: IntoAlpmListItem<'a, 'a> + NotAlpmDep,
     T::Borrow: Serialize,
 {
     fn serialize<'h, S>(&self, serializer: S) -> Result<S::Ok, S::Error>
@@ -236,9 +244,14 @@ where
     }
 }
 
-/// Converts [`PacList<Dep>`] to a vec of [`DepInfo`] for easy serialization
-impl<'a> From<PacList<'a, Dep<'a>>> for Vec<DepInfo<'a>> {
-    fn from(wrapper: PacList<'a, Dep<'a>>) -> Self {
-        wrapper.0.into_iter().map(|p| p.into()).collect()
+/// Special implementation for serializing [`alpm::Dep`],
+/// with the help of the [`DepInfo`] struct.
+impl<'a> Serialize for PacList<'a, Dep<'a>> {
+    fn serialize<'h, S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        let alpm_list = self.0;
+        serializer.collect_seq(alpm_list.into_iter().map(|dep| DepInfo::from(dep)))
     }
 }
