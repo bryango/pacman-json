@@ -7,10 +7,22 @@ use std::{collections::HashSet, fmt};
 
 use crate::reverse_deps::{RevDepsMap, ReverseDependencyMaps};
 
-/// Formats an object to String with its [`Debug`] info
-fn debug_format<T: fmt::Debug>(object: T) -> Box<str> {
-    format!("{:?}", object).into()
+trait DebugFormat {
+    /// Formats an object to String with its [`Debug`] info
+    fn format(&self) -> Box<str>
+    where
+        Self: fmt::Debug,
+    {
+        format!("{:?}", self).into()
+    }
 }
+
+// it seems that these implementations will be inlined in release mode. Nice!
+impl DebugFormat for alpm::PackageReason {}
+impl DebugFormat for alpm::PackageValidation {}
+impl DebugFormat for alpm::DepMod {}
+impl DebugFormat for alpm::Error {}
+impl DebugFormat for alpm::SignatureDecodeError {}
 
 // dump_pkg_full: https://gitlab.archlinux.org/pacman/pacman/-/blob/master/src/pacman/package.c
 
@@ -99,13 +111,13 @@ impl<'h> From<&Package<'h>> for PackageInfo<'h> {
             packager: pkg.packager(),
             build_date: pkg.build_date(),
             install_date: pkg.install_date(),
-            install_reason: debug_format(pkg.reason()),
+            install_reason: pkg.reason().format(),
             install_script: pkg.has_scriptlet(),
             md5_sum: pkg.md5sum(),
             sha_256_sum: pkg.sha256sum(),
             signatures: pkg.base64_sig(),
             key_id: None,
-            validated_by: debug_format(pkg.validation()),
+            validated_by: pkg.validation().format(),
             sync_with: None,
         }
     }
@@ -124,7 +136,7 @@ impl<'h> From<Dep<'h>> for DepInfo<'h> {
     fn from(dep: Dep<'h>) -> DepInfo<'h> {
         Self {
             name: dep.name(),
-            depmod: debug_format(dep.depmod()),
+            depmod: dep.depmod().format(),
             version: dep.version().map(|x| x.as_str()),
             description: dep.desc(),
             name_hash: dep.name_hash(),
@@ -134,20 +146,23 @@ impl<'h> From<Dep<'h>> for DepInfo<'h> {
 
 /// Decodes the signature & extracts the key ID
 pub fn decode_keyid<'h>(handle: &'h Alpm, pkg_info: PackageInfo<'h>) -> PackageInfo<'h> {
-    let sig = pkg_info.signatures.map(decode_signature);
-    let res = if let Some(Ok(decoded)) = sig {
-        Some(
-            handle
-                .extract_keyid(pkg_info.name, &decoded)
-                .map_err(debug_format)
-                .map(|x| x.into_iter().map(|x| x.into_boxed_str()).collect::<Vec<_>>())
-                .map_or_else(|err| vec![err], |res| res),
-        )
-    } else {
-        sig.map(debug_format).map(|err| vec![err])
+    let sig = match pkg_info.signatures {
+        None => return pkg_info,
+        Some(sig) => decode_signature(sig),
+    };
+    let res = match sig {
+        Err(err) => vec![err.format()],
+        Ok(decoded) => handle.extract_keyid(pkg_info.name, &decoded).map_or_else(
+            |err| vec![err.format()],
+            |keys| {
+                keys.into_iter()
+                    .map(|x| x.into_boxed_str())
+                    .collect::<Vec<_>>()
+            },
+        ),
     };
     PackageInfo {
-        key_id: res,
+        key_id: Some(res),
         ..pkg_info
     }
 }
