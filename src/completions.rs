@@ -10,7 +10,7 @@ use std::env;
 use pacjump::PackageFilters;
 
 fn main() -> anyhow::Result<()> {
-    let out_dir = env::var_os("PWD").expect("$PWD should have been set");
+    let out_dir = env::current_dir()?;
     for variant in Shell::value_variants() {
         clap_complete::generate_to(
             *variant,
