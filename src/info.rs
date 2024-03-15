@@ -93,8 +93,8 @@ impl<'h> From<&Package<'h>> for PackageInfo<'h> {
             description: pkg.desc(),
             architecture: pkg.arch(),
             url: pkg.url(),
-            licenses: PacList(pkg.licenses()),
-            groups: PacList(pkg.groups()),
+            licenses: pkg.licenses().into(),
+            groups: pkg.groups().into(),
             provides: PacList(pkg.provides()).into(),
             depends_on: PacList(pkg.depends()).into(),
             optional_deps: PacList(pkg.optdepends()).into(),
@@ -218,6 +218,11 @@ pub fn add_reverse_deps<'h>(
 /// `impl Serialize for AlpmList` does not work due to rust "orphan rules";
 /// see e.g. https://github.com/Ixrec/rust-orphan-rules.
 struct PacList<'a, T>(AlpmList<'a, T>);
+impl<'a, T> From<AlpmList<'a, T>> for PacList<'a, T> {
+    fn from(alpm_list: AlpmList<'a, T>) -> Self {
+        PacList(alpm_list)
+    }
+}
 
 impl<'a, T> Serialize for PacList<'a, T>
 where
