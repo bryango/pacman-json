@@ -12,9 +12,9 @@ use clap::Parser;
 fn main() {
     let pkg_filters = PackageFilters::parse();
 
-    let root = read_conf(["RootDir"]);
-    let db_path = read_conf(["DBPath"]);
-    let all_repos = read_conf(["--repo-list"]);
+    let root = read_conf(["RootDir"]).unwrap_or("/".into());
+    let db_path = read_conf(["DBPath"]).unwrap_or("/var/lib/pacman/".into());
+    let all_repos = read_conf(["--repo-list"]).unwrap_or(["core", "extra", "multilib"].join("\n"));
     eprintln!("RootDir: {root}");
     eprintln!("DBPath: {db_path}");
 
