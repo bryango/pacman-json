@@ -44,7 +44,30 @@ where
 /// - `process_siglevel`: https://gitlab.archlinux.org/pacman/pacman/-/blob/master/src/pacman/conf.c
 /// - `show_siglevel`: https://gitlab.archlinux.org/pacman/pacman/-/blob/master/src/pacman/pacman-conf.c
 ///
-fn process_siglevel(siglevel: &str, prev: SigLevel) -> SigLevel {
+/// ### Examples:
+///
+/// ```
+/// # use alpm::SigLevel;
+/// # use pacjump::siglevel::process_siglevel;
+/// #
+/// // when an empty string is passed, the siglevel is unmodified
+/// let siglevel = process_siglevel("", SigLevel::PACKAGE_OPTIONAL);
+/// assert_eq!(siglevel, SigLevel::PACKAGE_OPTIONAL);
+///
+/// // demands that packages require a signature:
+/// let siglevel = process_siglevel("PackageRequired", SigLevel::USE_DEFAULT);
+/// assert_eq!(siglevel, SigLevel::PACKAGE);
+/// ```
+///
+/// An unrecognized siglevel string would panic:
+///
+/// ```should_panic
+/// # use alpm::SigLevel;
+/// # use pacjump::siglevel::process_siglevel;
+/// process_siglevel("NonExistentSigLevel", SigLevel::PACKAGE_OPTIONAL); // panic!
+/// ```
+///
+pub fn process_siglevel(siglevel: &str, prev: SigLevel) -> SigLevel {
     let slset = |sl: SigLevel| (prev | sl) & !SigLevel::USE_DEFAULT;
     let slunset = |sl: SigLevel| (prev & !sl) & !SigLevel::USE_DEFAULT;
 
@@ -62,12 +85,39 @@ fn process_siglevel(siglevel: &str, prev: SigLevel) -> SigLevel {
         "DatabaseRequired" => slset(SigLevel::DATABASE) & !SigLevel::DATABASE_OPTIONAL,
         "DatabaseTrustedOnly" => slunset(database_trust_all),
         "DatabaseTrustAll" => slset(database_trust_all),
-        &_ => prev,
+        "" => prev,
+        x => panic!("failed to parse the signature level: {}", x),
     }
 }
 
-/// Updates the [`SigLevel`] recursively, from a multiline string
-fn fold_siglevels(siglevels: String, default: SigLevel) -> SigLevel {
+/// Updates the [`SigLevel`] recursively, from a multiline string.
+///
+/// ### Examples:
+///
+/// ```
+/// # use alpm::SigLevel;
+/// # use pacjump::siglevel::fold_siglevels;
+/// #
+/// let siglevel: String = [
+///     "PackageRequired",
+///     "PackageTrustedOnly",
+///     "DatabaseOptional",
+///     "DatabaseTrustedOnly",
+/// ].join("\n");
+///
+/// use SigLevel as Sig;
+/// let siglevel = fold_siglevels(siglevel, Sig::USE_DEFAULT);
+/// assert_eq!(siglevel, Sig::PACKAGE | Sig::DATABASE | Sig::DATABASE_OPTIONAL);
+///
+/// // empty lines are ignored:
+/// let siglevel = fold_siglevels("\n\n\n".into(), Sig::DATABASE_OPTIONAL);
+/// assert_eq!(siglevel, Sig::DATABASE_OPTIONAL);
+///
+/// let siglevel = fold_siglevels("".into(), Sig::DATABASE_OPTIONAL);
+/// assert_eq!(siglevel, Sig::DATABASE_OPTIONAL);
+/// ```
+///
+pub fn fold_siglevels(siglevels: String, default: SigLevel) -> SigLevel {
     siglevels
         .split_terminator('\n')
         .fold(default, |prev, new| process_siglevel(new, prev))
