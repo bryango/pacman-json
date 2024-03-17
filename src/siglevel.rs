@@ -33,11 +33,19 @@ where
     Ok(trimmed_string)
 }
 
-/// Parses and updates a [`SigLevel`] from the cli `pacman-conf`.
+/// Parses and updates a _single_ `SigLevel` line from the cli `pacman-conf`.
 ///
-/// * `siglevel`: [`str`] - the siglevel string to parse into a [`SigLevel`]
+/// * `siglevel`: [`str`] - the siglevel &str to parse into a [`SigLevel`]
 /// * `prev`: [`SigLevel`] - the previous [`SigLevel`] which would be
 ///                          stacked onto by the newly parsed `siglevel`
+///
+/// The `SigLevel` return of `pacman-conf` is a fine-grained subset of those
+/// allowed in `pacman.conf`. For example, `SigLevel = Required` in
+/// `pacman.conf` will be resolved to two SigLevel lines by `pacman-conf`:
+/// one is `PackageRequired`, and the other is `DatabaseRequired`. We are only
+/// committed to parsing this fined-grained subset returned from `pacman-conf`.
+/// In particular, plain `Required` without the `Package` or `Database` prefix
+/// would not be allowed, and the code will panic.
 ///
 /// This is a re-implementation of the following pacman functions:
 ///
@@ -50,8 +58,9 @@ where
 /// # use alpm::SigLevel;
 /// # use pacjump::siglevel::process_siglevel;
 /// #
-/// // when an empty string is passed, the siglevel is unmodified
-/// let siglevel = process_siglevel("", SigLevel::PACKAGE_OPTIONAL);
+/// // when an empty string is passed, the siglevel is unmodified;
+/// // whitespace is ignored:
+/// let siglevel = process_siglevel("\n\t \n", SigLevel::PACKAGE_OPTIONAL);
 /// assert_eq!(siglevel, SigLevel::PACKAGE_OPTIONAL);
 ///
 /// // demands that packages require a signature:
@@ -64,7 +73,10 @@ where
 /// ```should_panic
 /// # use alpm::SigLevel;
 /// # use pacjump::siglevel::process_siglevel;
-/// process_siglevel("NonExistentSigLevel", SigLevel::PACKAGE_OPTIONAL); // panic!
+/// process_siglevel("NonExistentSigLevel", SigLevel::USE_DEFAULT); // panic!
+///
+/// // only fine-grained SigLevels are allowed:
+/// process_siglevel("Required", SigLevel::USE_DEFAULT); // panic!
 /// ```
 ///
 pub fn process_siglevel(siglevel: &str, prev: SigLevel) -> SigLevel {
@@ -74,7 +86,7 @@ pub fn process_siglevel(siglevel: &str, prev: SigLevel) -> SigLevel {
     let package_trust_all = SigLevel::PACKAGE_MARGINAL_OK | SigLevel::PACKAGE_UNKNOWN_OK;
     let database_trust_all = SigLevel::DATABASE_MARGINAL_OK | SigLevel::DATABASE_UNKNOWN_OK;
 
-    match siglevel {
+    match siglevel.trim() {
         "PackageNever" => slunset(SigLevel::PACKAGE),
         "PackageOptional" => slset(SigLevel::PACKAGE | SigLevel::PACKAGE_OPTIONAL),
         "PackageRequired" => slset(SigLevel::PACKAGE) & !SigLevel::PACKAGE_OPTIONAL,
