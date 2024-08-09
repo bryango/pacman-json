@@ -32,14 +32,14 @@ pub struct PackageFilters {
 /// optionally returns the desired [`info::PackageInfo`].
 pub fn pkg_filter_map<'a>(
     handle: &'a Alpm,
-    pkg: Package<'a>,
+    pkg: &'a Package,
     pkg_filters: &PackageFilters,
 ) -> Option<PackageInfo<'a>> {
     if !pkg_filters.all && pkg.reason() != PackageReason::Explicit {
         return None;
     }
     if pkg_filters.plain {
-        return Some(PackageInfo::from(&pkg));
+        return Some(PackageInfo::from(pkg));
     }
     return Some(enrich_pkg_info(&handle, pkg, &pkg_filters));
 }
@@ -49,10 +49,10 @@ pub fn pkg_filter_map<'a>(
 /// it will be preferred as the base info since it contains more details.
 pub fn enrich_pkg_info<'a>(
     handle: &'a Alpm,
-    pkg: Package<'a>,
+    pkg: &'a Package,
     pkg_filters: &PackageFilters,
 ) -> PackageInfo<'a> {
-    let base_info = PackageInfo::from(&pkg);
+    let base_info = PackageInfo::from(pkg);
 
     if pkg_filters.sync {
         let sync_pkg = pkg;
@@ -63,7 +63,7 @@ pub fn enrich_pkg_info<'a>(
         match handle.localdb().pkg(sync_pkg.name()) {
             Err(_) => return sync_info,
             Ok(local_pkg) => {
-                let local_info = PackageInfo::from(&local_pkg);
+                let local_info = PackageInfo::from(local_pkg);
                 return add_local_info(local_info, sync_info);
             }
         };
@@ -79,7 +79,7 @@ pub fn enrich_pkg_info<'a>(
         }
         Ok(x) => x,
     };
-    let sync_info = decode_keyid(&handle, PackageInfo::from(&sync_pkg));
+    let sync_info = decode_keyid(&handle, PackageInfo::from(sync_pkg));
 
     return match pkg_filters.plain
         || local_pkg.packager() != sync_pkg.packager()
@@ -91,7 +91,7 @@ pub fn enrich_pkg_info<'a>(
 }
 
 /// Locates a Package from the sync databases by its name.
-pub fn find_in_syncdb<'a>(handle: &'a Alpm, package: Package) -> Result<Package<'a>, String> {
+pub fn find_in_syncdb<'a>(handle: &'a Alpm, package: &'a Package) -> Result<&'a Package, String> {
     // https://github.com/archlinux/alpm.rs/blob/master/alpm/examples/packages.rs
     // dump_pkg_search, print_installed: https://gitlab.archlinux.org/pacman/pacman/-/blob/master/src/pacman/package.c
     // display, filter, pkg_get_locality: https://gitlab.archlinux.org/pacman/pacman/-/blob/master/src/pacman/query.c

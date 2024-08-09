@@ -24,7 +24,7 @@ pub type RevDepsMap = HashMap<String, HashSet<String>>;
 /// from: <https://github.com/jelly/pacquery>.
 pub fn get_reverse_deps_map(
     handle: &Alpm,
-    get_dependencies: fn(Package) -> AlpmList<Dep>,
+    get_dependencies: fn(&Package) -> AlpmList<&Dep>,
 ) -> RevDepsMap {
     let mut reverse_deps: RevDepsMap = HashMap::new();
     let dbs = handle.syncdbs();

@@ -39,13 +39,13 @@ pub struct PackageInfo<'h> {
     url: Option<&'h str>,
     licenses: PacList<'h, &'h str>,
     groups: PacList<'h, &'h str>,
-    provides: PacList<'h, Dep<'h>>,
-    depends_on: PacList<'h, Dep<'h>>,
-    optional_deps: PacList<'h, Dep<'h>>,
-    makedepends: PacList<'h, Dep<'h>>,
-    checkdepends: PacList<'h, Dep<'h>>,
-    conflicts_with: PacList<'h, Dep<'h>>,
-    replaces: PacList<'h, Dep<'h>>,
+    provides: PacList<'h, &'h Dep>,
+    depends_on: PacList<'h, &'h Dep>,
+    optional_deps: PacList<'h, &'h Dep>,
+    makedepends: PacList<'h, &'h Dep>,
+    checkdepends: PacList<'h, &'h Dep>,
+    conflicts_with: PacList<'h, &'h Dep>,
+    replaces: PacList<'h, &'h Dep>,
 
     /// [`PackageInfo::required_by`] and similarly, `optional_for`
     /// and `required_by_{make,check}` are reverse dependencies; they are
@@ -75,10 +75,10 @@ pub struct PackageInfo<'h> {
     sync_with: Option<Box<PackageInfo<'h>>>,
 }
 
-impl<'h> From<&Package<'h>> for PackageInfo<'h> {
+impl<'h> From<&'h Package> for PackageInfo<'h> {
     /// Converts an alpm [`Package`] to a [`PackageInfo`] containing the
     /// relevant information, to be serialized.
-    fn from(pkg: &Package<'h>) -> PackageInfo<'h> {
+    fn from(pkg: &'h Package) -> PackageInfo<'h> {
         let db = pkg.db().map(|db| db.name());
         let name = pkg.name();
         // eprintln!("{:?}: {}", db, name);
@@ -130,8 +130,8 @@ struct DepInfo<'h> {
     name_hash: u64,
 }
 
-impl<'h> From<Dep<'h>> for DepInfo<'h> {
-    fn from(dep: Dep<'h>) -> DepInfo<'h> {
+impl<'h> From<&'h Dep> for DepInfo<'h> {
+    fn from(dep: &'h Dep) -> DepInfo<'h> {
         Self {
             name: dep.name(),
             depmod: dep.depmod().format(),
@@ -232,8 +232,7 @@ impl NotAlpmDep for &str {}
 
 impl<'a, T> Serialize for PacList<'a, T>
 where
-    T: IntoAlpmListItem<'a, 'a> + NotAlpmDep,
-    T::Borrow: Serialize,
+    T: IntoAlpmListItem + NotAlpmDep + Serialize,
 {
     fn serialize<'h, S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
@@ -246,7 +245,7 @@ where
 
 /// Special implementation for serializing [`alpm::Dep`],
 /// with the help of the [`DepInfo`] struct.
-impl<'a> Serialize for PacList<'a, Dep<'a>> {
+impl<'a> Serialize for PacList<'a, &'a Dep> {
     fn serialize<'h, S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
         S: Serializer,
