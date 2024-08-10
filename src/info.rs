@@ -1,7 +1,8 @@
 //! This module defines the [`PackageInfo`] struct for serializing package
 //! information, including functions to encode and decode relevant data.
 
-use alpm::{decode_signature, Alpm, AlpmList, Dep, IntoAlpmListItem, Package};
+use alpm::{decode_signature, Alpm, AlpmList, AlpmListMut, Db, Dep, IntoAlpmListItem, Package};
+use rayon::prelude::*;
 use serde::Serialize;
 use std::{collections::HashSet, fmt::Debug};
 
@@ -26,7 +27,7 @@ impl<T: Debug> DebugFormat for T {}
 
 /// This is a wrapper of the relevant information of a pacman [`Package`]
 /// for ease of serialization by [`serde`].
-#[derive(Serialize)]
+#[derive(Serialize, Clone)]
 pub struct PackageInfo<'h> {
     // #[allow(dead_code)]
     // #[serde(skip)]
@@ -121,8 +122,9 @@ impl<'h> From<&'h Package> for PackageInfo<'h> {
     }
 }
 
-#[derive(Serialize)]
+#[derive(Serialize, Clone)]
 struct DepInfo<'h> {
+    dep_string: String,
     name: &'h str,
     depmod: Box<str>,
     version: Option<&'h str>,
@@ -134,6 +136,7 @@ struct DepInfo<'h> {
 impl<'h> From<&'h Dep> for DepInfo<'h> {
     fn from(dep: &'h Dep) -> DepInfo<'h> {
         Self {
+            dep_string: dep.to_string(),
             name: dep.name(),
             depmod: dep.depmod().format(),
             version: dep.version().map(|x| x.as_str()),
@@ -212,12 +215,38 @@ pub fn add_reverse_deps<'h>(
     }
 }
 
+pub fn recurse_dependencies<'h, T>(databases: T, pkg_info: PackageInfo<'h>) -> PackageInfo<'h>
+where
+    T: IntoIterator<Item = &'h Db> + Clone + Sync,
+{
+    let mut_list = AlpmListMut::from_iter(databases.clone().into_iter());
+    let db_list = mut_list.list();
+    let depends_on: Vec<DepInfo<'h>> = pkg_info
+        .depends_on
+        .iter() // TODO: par_iter
+        .map(|dep| {
+            let package_info = db_list
+                .clone()
+                .find_satisfier(dep.dep_string.clone())
+                .map(|pkg| recurse_dependencies(databases.clone(), PackageInfo::from(pkg)));
+            DepInfo {
+                package_info: package_info,
+                ..dep.clone()
+            }
+        })
+        .collect();
+    PackageInfo {
+        depends_on: depends_on.into(),
+        ..pkg_info
+    }
+}
+
 /// A newtype [`Vec`] to enclose various lists, e.g. packages, licenses, ...
 /// returned from alpm. Conversions from [`AlpmList`] are implemented.
 ///
 /// `impl Serialize for AlpmList` does not work due to rust "orphan rules";
 /// see e.g. https://github.com/Ixrec/rust-orphan-rules.
-#[derive(Serialize)]
+#[derive(Serialize, Clone, derive_more::Deref, derive_more::From)]
 struct PacList<T>(Vec<T>);
 
 impl<'a, T: IntoAlpmListItem> From<AlpmList<'a, T>> for PacList<T> {

@@ -27,11 +27,13 @@ pub struct PackageFilters {
     #[arg(long)]
     pub plain: bool,
 
-    /// Recursively query the dependencies of the given package.
+    /// Recursively query the dependencies of the given package;
+    /// implies --all.
     #[arg(long)]
     pub recurse: Option<String>,
 
-    /// Query the reverse dependencies of the given package.
+    /// Query the reverse dependencies of the given package;
+    /// implies --all.
     #[arg(long, conflicts_with = "recurse")]
     pub reverse: Option<String>,
 }
