@@ -2,7 +2,7 @@ pub mod info;
 pub mod reverse_deps;
 pub mod siglevel;
 
-use alpm::{Alpm, Package, PackageReason};
+use alpm::{Alpm, Db, Package, PackageReason};
 use clap::Parser;
 use info::{add_local_info, add_sync_info, decode_keyid, PackageInfo};
 
@@ -80,7 +80,7 @@ pub fn enrich_pkg_info<'a>(
     // otherwise, the input `pkg` is local:
     let local_pkg = pkg;
     let local_info = base_info;
-    let sync_pkg = match find_in_syncdb(&handle, local_pkg) {
+    let sync_pkg = match find_in_databases(handle.syncdbs(), local_pkg) {
         Err(msg) => {
             eprintln!("{}", msg);
             return local_info;
@@ -98,14 +98,17 @@ pub fn enrich_pkg_info<'a>(
     };
 }
 
-/// Locates a Package from the sync databases by its name.
-pub fn find_in_syncdb<'a>(handle: &'a Alpm, package: &'a Package) -> Result<&'a Package, String> {
+/// Locates a Package from some databases by its name.
+pub fn find_in_databases<'a, T>(databases: T, package: &'a Package) -> Result<&'a Package, String>
+where
+    T: IntoIterator<Item = &'a Db>,
+{
     // https://github.com/archlinux/alpm.rs/blob/master/alpm/examples/packages.rs
     // dump_pkg_search, print_installed: https://gitlab.archlinux.org/pacman/pacman/-/blob/master/src/pacman/package.c
     // display, filter, pkg_get_locality: https://gitlab.archlinux.org/pacman/pacman/-/blob/master/src/pacman/query.c
 
     // iterate through each database
-    for db in handle.syncdbs() {
+    for db in databases {
         // look for a package by name in a database; the database is
         // implemented as a hashmap so this is faster than iterating:
         match db.pkg(package.name()) {
