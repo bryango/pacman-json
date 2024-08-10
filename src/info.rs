@@ -2,7 +2,7 @@
 //! information, including functions to encode and decode relevant data.
 
 use alpm::{decode_signature, Alpm, AlpmList, Dep, IntoAlpmListItem, Package};
-use serde::{Serialize, Serializer};
+use serde::Serialize;
 use std::{collections::HashSet, fmt::Debug};
 
 use crate::reverse_deps::{RevDepsMap, ReverseDependencyMaps};
@@ -37,15 +37,15 @@ pub struct PackageInfo<'h> {
     description: Option<&'h str>,
     architecture: Option<&'h str>,
     url: Option<&'h str>,
-    licenses: PacList<'h, &'h str>,
-    groups: PacList<'h, &'h str>,
-    provides: PacList<'h, &'h Dep>,
-    depends_on: PacList<'h, &'h Dep>,
-    optional_deps: PacList<'h, &'h Dep>,
-    makedepends: PacList<'h, &'h Dep>,
-    checkdepends: PacList<'h, &'h Dep>,
-    conflicts_with: PacList<'h, &'h Dep>,
-    replaces: PacList<'h, &'h Dep>,
+    licenses: PacList<&'h str>,
+    groups: PacList<&'h str>,
+    provides: PacList<DepInfo<'h>>,
+    depends_on: PacList<DepInfo<'h>>,
+    optional_deps: PacList<DepInfo<'h>>,
+    makedepends: PacList<DepInfo<'h>>,
+    checkdepends: PacList<DepInfo<'h>>,
+    conflicts_with: PacList<DepInfo<'h>>,
+    replaces: PacList<DepInfo<'h>>,
 
     /// [`PackageInfo::required_by`] and similarly, `optional_for`
     /// and `required_by_{make,check}` are reverse dependencies; they are
@@ -212,47 +212,27 @@ pub fn add_reverse_deps<'h>(
     }
 }
 
-/// A type to enclose various lists, e.g. packages, licenses, ... that are
-/// returned from alpm. This is a newtype around [`AlpmList`].
+/// A newtype [`Vec`] to enclose various lists, e.g. packages, licenses, ...
+/// returned from alpm. Conversions from [`AlpmList`] are implemented.
 ///
 /// `impl Serialize for AlpmList` does not work due to rust "orphan rules";
 /// see e.g. https://github.com/Ixrec/rust-orphan-rules.
-struct PacList<'a, T>(AlpmList<'a, T>);
-impl<'a, T> From<AlpmList<'a, T>> for PacList<'a, T> {
+#[derive(Serialize)]
+struct PacList<T>(Vec<T>);
+
+impl<'a, T: IntoAlpmListItem> From<AlpmList<'a, T>> for PacList<T> {
     fn from(alpm_list: AlpmList<'a, T>) -> Self {
-        PacList(alpm_list)
+        let vector: Vec<_> = alpm_list.into_iter().collect();
+        PacList(vector)
     }
 }
 
-/// A marker trait to label generics that are _not_ [`alpm::Dep`] and can be
-/// directly serialized. [`alpm::Dep`] requires a separate implementation
-/// with special care.
-///
-/// This trick is taken from https://stackoverflow.com/a/66537661.
-trait NotAlpmDep {}
-impl NotAlpmDep for &str {}
-
-impl<'a, T> Serialize for PacList<'a, T>
-where
-    T: IntoAlpmListItem + NotAlpmDep + Serialize,
-{
-    fn serialize<'h, S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: Serializer,
-    {
-        let alpm_list = self.0;
-        serializer.collect_seq(alpm_list.into_iter())
-    }
-}
-
-/// Special implementation for serializing [`alpm::Dep`],
-/// with the help of the [`DepInfo`] struct.
-impl<'a> Serialize for PacList<'a, &'a Dep> {
-    fn serialize<'h, S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: Serializer,
-    {
-        let alpm_list = self.0;
-        serializer.collect_seq(alpm_list.into_iter().map(|dep| DepInfo::from(dep)))
+impl<'a> From<AlpmList<'a, &'a Dep>> for PacList<DepInfo<'a>> {
+    fn from(alpm_list: AlpmList<'a, &'a Dep>) -> Self {
+        let vector: Vec<_> = alpm_list
+            .into_iter()
+            .map(|dep| DepInfo::from(dep))
+            .collect();
+        PacList(vector)
     }
 }
