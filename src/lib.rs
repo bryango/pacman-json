@@ -43,7 +43,12 @@ pub fn pkg_filter_map<'a>(
     pkg: &'a Package,
     pkg_filters: &PackageFilters,
 ) -> Option<PackageInfo<'a>> {
-    if !pkg_filters.all && pkg.reason() != PackageReason::Explicit {
+    // only focus on explicitly installed packages
+    if pkg_filters.recurse.is_none()
+        && pkg_filters.reverse.is_none()
+        && !pkg_filters.all
+        && pkg.reason() != PackageReason::Explicit
+    {
         return None;
     }
     if pkg_filters.plain {
@@ -80,7 +85,7 @@ pub fn enrich_pkg_info<'a>(
     // otherwise, the input `pkg` is local:
     let local_pkg = pkg;
     let local_info = base_info;
-    let sync_pkg = match find_in_databases(handle.syncdbs(), local_pkg) {
+    let sync_pkg = match find_in_databases(handle.syncdbs(), local_pkg.name()) {
         Err(msg) => {
             eprintln!("{}", msg);
             return local_info;
@@ -99,7 +104,7 @@ pub fn enrich_pkg_info<'a>(
 }
 
 /// Locates a Package from some databases by its name.
-pub fn find_in_databases<'a, T>(databases: T, package: &'a Package) -> Result<&'a Package, String>
+pub fn find_in_databases<'a, T>(databases: T, package: &'a str) -> Result<&'a Package, String>
 where
     T: IntoIterator<Item = &'a Db>,
 {
@@ -111,7 +116,7 @@ where
     for db in databases {
         // look for a package by name in a database; the database is
         // implemented as a hashmap so this is faster than iterating:
-        match db.pkg(package.name()) {
+        match db.pkg(package) {
             Ok(pkg) => return Ok(pkg),
             Err(_) => {}
         }
