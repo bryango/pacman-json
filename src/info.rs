@@ -8,7 +8,7 @@ use std::{collections::HashSet, fmt::Debug};
 use crate::reverse_deps::{RevDepsMap, ReverseDependencyMaps};
 
 trait DebugFormat {
-    /// Formats an object to String with its [`Debug`] info
+    /// Formats an object to [`Box<str>`] with its [`Debug`] info
     fn format(&self) -> Box<str>
     where
         Self: Debug,
@@ -128,6 +128,7 @@ struct DepInfo<'h> {
     version: Option<&'h str>,
     description: Option<&'h str>,
     name_hash: u64,
+    package_info: Option<PackageInfo<'h>>,
 }
 
 impl<'h> From<&'h Dep> for DepInfo<'h> {
@@ -138,6 +139,7 @@ impl<'h> From<&'h Dep> for DepInfo<'h> {
             version: dep.version().map(|x| x.as_str()),
             description: dep.desc(),
             name_hash: dep.name_hash(),
+            package_info: None,
         }
     }
 }

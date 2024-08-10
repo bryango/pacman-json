@@ -26,6 +26,14 @@ pub struct PackageFilters {
     /// and the sync databases.
     #[arg(long)]
     pub plain: bool,
+
+    /// Recursively query the dependencies of the given package.
+    #[arg(long)]
+    pub recurse: Option<String>,
+
+    /// Query the reverse dependencies of the given package.
+    #[arg(long, conflicts_with = "recurse")]
+    pub reverse: Option<String>,
 }
 
 /// Applies an instance of [`PackageFilters`] to a [`alpm::Package`], and
