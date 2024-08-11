@@ -67,24 +67,24 @@ fn main() -> anyhow::Result<()> {
         deps_pkgs.reverse();
         deps_pkgs
     } else {
-
-    eprintln!("# enumerating packages ...");
-    db_list
-        .iter()
-        .map(|db| {
-            eprintln!("{}: {}", db.name(), db.pkgs().len());
-            db.pkgs()
-                .iter()
-                .filter_map(|pkg| {
-                    generate_pkg_info(&handle, pkg, &pkg_filters)
-                        .map(|pkg_info| add_reverse_deps(pkg_info, &reverse_deps))
-                        .ok()
-                })
-                .collect::<Vec<_>>()
-        })
-        .flatten()
-        .collect() // flattened list of packages
+        eprintln!("# enumerating packages ...");
+        db_list
+            .iter()
+            .map(|db| {
+                eprintln!("{}: {}", db.name(), db.pkgs().len());
+                db.pkgs()
+                    .iter()
+                    .filter_map(|pkg| {
+                        generate_pkg_info(&handle, pkg, &pkg_filters)
+                            .map(|pkg_info| add_reverse_deps(pkg_info, &reverse_deps))
+                            .ok()
+                    })
+                    .collect::<Vec<_>>()
+            })
+            .flatten()
+            .collect() // flattened list of packages
     };
+
     eprintln!("# done. Serializing ...");
     eprintln!("");
 
