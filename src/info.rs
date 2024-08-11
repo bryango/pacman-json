@@ -242,11 +242,10 @@ where
                 .map(|pkg| {
                     let satisfier = format!("{}={}", pkg.name(), pkg.version());
                     let next_depth = depth + 1;
-                    let pkg_info = PackageInfo::from(pkg);
                     if !deps_set.contains(&satisfier) {
                         recurse_dependencies(
                             databases.clone(),
-                            pkg_info,
+                            PackageInfo::from(pkg),
                             next_depth,
                             deps_set,
                             deps_pkgs,

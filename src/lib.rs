@@ -29,13 +29,17 @@ pub struct PackageFilters {
 
     /// Recursively query the dependencies of the given package;
     /// implies --all.
-    #[arg(long)]
+    #[arg(long, group = "deps")]
     pub recurse: Option<String>,
 
     /// Query the reverse dependencies of the given package;
     /// implies --all.
-    #[arg(long, conflicts_with = "recurse")]
+    #[arg(long, group = "deps", conflicts_with = "recurse")]
     pub reverse: Option<String>,
+
+    /// '--recurse' or '--reverse' optional dependencies.
+    #[arg(long, requires = "deps")]
+    pub optional: bool
 }
 
 /// Applies an instance of [`PackageFilters`] to a [`alpm::Package`], and
