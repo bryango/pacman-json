@@ -129,7 +129,7 @@ struct DepInfo<'h> {
     version: Option<&'h str>,
     description: Option<&'h str>,
     name_hash: u64,
-    package_info: Option<Box<PackageInfo<'h>>>,
+    satisfier: Option<String>,
 }
 
 impl<'h> From<&'h Dep> for DepInfo<'h> {
@@ -141,7 +141,7 @@ impl<'h> From<&'h Dep> for DepInfo<'h> {
             version: dep.version().map(|x| x.as_str()),
             description: dep.desc(),
             name_hash: dep.name_hash(),
-            package_info: None,
+            satisfier: None,
         }
     }
 }
@@ -219,11 +219,14 @@ pub fn recurse_dependencies<'h, T>(
     databases: T,
     pkg_info: PackageInfo<'h>,
     depth: u64,
-    deps_set: &mut HashSet<&'h str>,
+    deps_set: &mut HashSet<String>,
+    deps_pkgs: &mut Vec<PackageInfo<'h>>
 ) -> PackageInfo<'h>
 where
     T: IntoIterator<Item = &'h Db> + Clone,
 {
+    deps_set.insert(format!("{}={}", pkg_info.name, pkg_info.version));
+    deps_pkgs.push(pkg_info.clone());
     let mut_list = AlpmListMut::from_iter(databases.clone().into_iter());
     let db_list = mut_list.list();
     eprintln!(
@@ -234,23 +237,22 @@ where
         .depends_on
         .iter()
         .map(|dep| {
-            let package_info = db_list
+            let satisfier = db_list
                 .clone()
                 .find_satisfier(dep.dep_string.clone())
                 .map(|pkg| {
+                    let satisfier = format!("{}={}", pkg.name(), pkg.version());
                     let next_depth = depth + 1;
-                    let pkg_name = pkg.name();
                     let pkg_info = PackageInfo::from(pkg);
-                    if !deps_set.contains(pkg_name) {
-                        deps_set.insert(pkg_name);
-                        recurse_dependencies(databases.clone(), pkg_info, next_depth, deps_set)
+                    if !deps_set.contains(&satisfier) {
+                        recurse_dependencies(databases.clone(), pkg_info, next_depth, deps_set, deps_pkgs);
                     } else {
-                        eprintln!("# level {}: duplicated dependency: '{}' provides '{}'", next_depth, pkg_name, dep.dep_string.clone());
-                        pkg_info
+                        eprintln!("# level {}: duplicated dependency: '{}' provides '{}'", next_depth, satisfier, dep.dep_string.clone());
                     }
+                    satisfier
                 });
             DepInfo {
-                package_info: package_info.map(Box::new),
+                satisfier: satisfier,
                 ..dep.clone()
             }
         })

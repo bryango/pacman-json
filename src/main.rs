@@ -55,7 +55,8 @@ fn main() -> anyhow::Result<()> {
         let pkg = find_in_databases(db_list.clone(), &name)?;
         let pkg_info = generate_pkg_info(&handle, pkg, &pkg_filters)?;
         let mut deps_set = HashSet::new();
-        let info_with_deps = recurse_dependencies(db_list, pkg_info, 0, &mut deps_set);
+        let mut deps_pkgs = Vec::new();
+        let info_with_deps = recurse_dependencies(db_list, pkg_info, 0, &mut deps_set, &mut deps_pkgs);
 
         // eprint!("done");
         // eprint!("{:?}", info_with_deps);
