@@ -214,6 +214,7 @@ pub fn add_reverse_deps<'h>(
     }
 }
 
+/// TODO: doc, optional, enrich
 pub fn recurse_dependencies<'h, T>(databases: T, pkg_info: PackageInfo<'h>) -> PackageInfo<'h>
 where
     T: IntoIterator<Item = &'h Db> + Clone,
@@ -222,7 +223,7 @@ where
     let db_list = mut_list.list();
     let depends_on: Vec<DepInfo<'h>> = pkg_info
         .depends_on
-        .iter() // TODO: par_iter
+        .iter()
         .map(|dep| {
             let package_info = db_list
                 .clone()

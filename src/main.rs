@@ -10,6 +10,8 @@ use clap::Parser;
 /// Local packages are matched against the sync databases,
 /// and upstream info is added to the output.
 fn main() -> anyhow::Result<()> {
+    #[cfg(debug_assertions)]
+    unsafe { backtrace_on_stack_overflow::enable() };
     let pkg_filters = PackageFilters::parse();
 
     let root = read_conf(["RootDir"]).unwrap_or("/".into());
