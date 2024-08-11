@@ -218,7 +218,7 @@ pub fn add_reverse_deps<'h>(
     }
 }
 
-/// TODO: doc, optional, enrich
+/// TODO: doc, optional, reverse
 pub fn recurse_dependencies<'h, T>(
     handle: &'h Alpm,
     databases: T,
@@ -238,8 +238,11 @@ where
         "# level {}: recursing into '{}': {:?}\n",
         depth, pkg_info.name, pkg_info.depends_on
     );
-    let depends_on: Vec<DepInfo<'h>> = pkg_info
-        .depends_on
+    let dependencies = match pkg_filters.optional {
+        true => pkg_info.optional_deps.clone(),
+        false => pkg_info.depends_on.clone(),
+    };
+    let satisfied_dependencies: Vec<DepInfo<'h>> = dependencies
         .iter()
         .map(|dep| {
             let pkg = match db_list.clone().find_satisfier(dep.dep_string.clone()) {
@@ -274,9 +277,15 @@ where
             }
         })
         .collect();
-    deps_pkgs.push(PackageInfo {
-        depends_on: depends_on.into(),
-        ..pkg_info
+    deps_pkgs.push(match pkg_filters.optional {
+        true => PackageInfo {
+            optional_deps: satisfied_dependencies.into(),
+            ..pkg_info
+        },
+        false => PackageInfo {
+            depends_on: satisfied_dependencies.into(),
+            ..pkg_info
+        },
     });
 }
 
