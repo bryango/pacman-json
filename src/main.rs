@@ -13,6 +13,7 @@ use clap::Parser;
 /// and upstream info is added to the output.
 fn main() -> anyhow::Result<()> {
     #[cfg(debug_assertions)]
+    #[cfg(feature = "backtrace-overflow")]
     unsafe {
         backtrace_on_stack_overflow::enable()
     };
