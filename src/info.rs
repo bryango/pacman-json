@@ -5,7 +5,11 @@ use alpm::{decode_signature, Alpm, AlpmList, AlpmListMut, Db, Dep, IntoAlpmListI
 use serde::Serialize;
 use std::{collections::HashSet, fmt::Debug};
 
-use crate::reverse_deps::{RevDepsMap, ReverseDependencyMaps};
+use crate::{
+    generate_pkg_info,
+    reverse_deps::{RevDepsMap, ReverseDependencyMaps},
+    PackageFilters,
+};
 
 trait DebugFormat {
     /// Formats an object to [`Box<str>`] with its [`Debug`] info
@@ -216,7 +220,9 @@ pub fn add_reverse_deps<'h>(
 
 /// TODO: doc, optional, enrich
 pub fn recurse_dependencies<'h, T>(
+    handle: &'h Alpm,
     databases: T,
+    pkg_filters: &PackageFilters,
     pkg_info: PackageInfo<'h>,
     depth: u64,
     deps_set: &mut HashSet<String>,
@@ -236,32 +242,34 @@ where
         .depends_on
         .iter()
         .map(|dep| {
-            let satisfier = db_list
-                .clone()
-                .find_satisfier(dep.dep_string.clone())
-                .map(|pkg| {
-                    let satisfier = format!("{}={}", pkg.name(), pkg.version());
-                    let next_depth = depth + 1;
-                    if !deps_set.contains(&satisfier) {
-                        recurse_dependencies(
-                            databases.clone(),
-                            PackageInfo::from(pkg),
-                            next_depth,
-                            deps_set,
-                            deps_pkgs,
-                        );
-                    } else {
-                        eprintln!(
-                            "# level {}: duplicated dependency: '{}' provides '{}'",
-                            next_depth,
-                            satisfier,
-                            dep.dep_string.clone()
-                        );
-                    }
-                    satisfier
-                });
+            let pkg = match db_list.clone().find_satisfier(dep.dep_string.clone()) {
+                Some(pkg) => pkg,
+                None => return dep.clone(),
+            };
+            let satisfier = format!("{}={}", pkg.name(), pkg.version());
+            let next_depth = depth + 1;
+            if !deps_set.contains(&satisfier) {
+                let pkg_info =
+                    generate_pkg_info(handle, pkg, pkg_filters).unwrap_or(PackageInfo::from(pkg));
+                recurse_dependencies(
+                    &handle,
+                    databases.clone(),
+                    pkg_filters,
+                    pkg_info,
+                    next_depth,
+                    deps_set,
+                    deps_pkgs,
+                );
+            } else {
+                eprintln!(
+                    "# level {}: duplicated dependency: '{}' provides '{}'",
+                    next_depth,
+                    satisfier,
+                    dep.dep_string.clone()
+                );
+            }
             DepInfo {
-                satisfier: satisfier,
+                satisfier: Some(satisfier),
                 ..dep.clone()
             }
         })

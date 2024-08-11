@@ -66,7 +66,7 @@ pub fn generate_pkg_info<'a>(
 /// Enriches package with sync & local database information, if desired and
 /// when possible. If the sync database information is available and accurate,
 /// it will be preferred as the base info since it contains more details.
-pub fn enrich_pkg_info<'a>(
+fn enrich_pkg_info<'a>(
     handle: &'a Alpm,
     pkg: &'a Package,
     pkg_filters: &PackageFilters,
