@@ -40,23 +40,23 @@ pub struct PackageFilters {
 
 /// Applies an instance of [`PackageFilters`] to a [`alpm::Package`], and
 /// optionally returns the desired [`info::PackageInfo`].
-pub fn pkg_filter_map<'a>(
+pub fn generate_pkg_info<'a>(
     handle: &'a Alpm,
     pkg: &'a Package,
     pkg_filters: &PackageFilters,
-) -> Option<PackageInfo<'a>> {
+) -> anyhow::Result<PackageInfo<'a>> {
     // only focus on explicitly installed packages
     if pkg_filters.recurse.is_none()
         && pkg_filters.reverse.is_none()
         && !pkg_filters.all
         && pkg.reason() != PackageReason::Explicit
     {
-        return None;
+        anyhow::bail!("{:?} not explicitly installed, skipped", pkg);
     }
     if pkg_filters.plain {
-        return Some(PackageInfo::from(pkg));
+        return Ok(PackageInfo::from(pkg));
     }
-    return Some(enrich_pkg_info(&handle, pkg, &pkg_filters));
+    return Ok(enrich_pkg_info(&handle, pkg, &pkg_filters));
 }
 
 /// Enriches package with sync & local database information, if desired and
@@ -106,7 +106,7 @@ pub fn enrich_pkg_info<'a>(
 }
 
 /// Locates a Package from some databases by its name.
-pub fn find_in_databases<'a, T>(databases: T, package: &'a str) -> Result<&'a Package, String>
+pub fn find_in_databases<'a, T>(databases: T, package: &'a str) -> anyhow::Result<&'a Package>
 where
     T: IntoIterator<Item = &'a Db>,
 {
@@ -123,5 +123,5 @@ where
             Err(_) => {}
         }
     }
-    Err(format!("{:?} not found in the sync databases", package))
+    anyhow::bail!("{:?} not found in the sync databases", package)
 }

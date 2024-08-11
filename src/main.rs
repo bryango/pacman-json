@@ -1,7 +1,7 @@
-use pacjump::info::{add_reverse_deps, PackageInfo};
+use pacjump::info::{add_reverse_deps, recurse_dependencies, PackageInfo};
 use pacjump::reverse_deps::ReverseDependencyMaps;
 use pacjump::siglevel::{default_siglevel, read_conf, repo_siglevel};
-use pacjump::{pkg_filter_map, PackageFilters};
+use pacjump::{find_in_databases, generate_pkg_info, PackageFilters};
 
 use alpm::Alpm;
 use clap::Parser;
@@ -9,7 +9,7 @@ use clap::Parser;
 /// Dumps json data of the explicitly installed pacman packages.
 /// Local packages are matched against the sync databases,
 /// and upstream info is added to the output.
-fn main() {
+fn main() -> anyhow::Result<()> {
     let pkg_filters = PackageFilters::parse();
 
     let root = read_conf(["RootDir"]).unwrap_or("/".into());
@@ -47,6 +47,20 @@ fn main() {
         vec![handle.localdb()]
     };
 
+    if let Some(name) = pkg_filters.recurse.clone() {
+        let pkg = find_in_databases(db_list.clone(), &name)?;
+        let pkg_info = generate_pkg_info(&handle, pkg, &pkg_filters)?;
+        let info_with_deps = recurse_dependencies(db_list, pkg_info);
+
+        let json = serde_json::to_string(&info_with_deps).expect("failed serializing json");
+        println!("{}", json);
+
+        eprintln!("");
+        eprintln!("# all done.");
+
+        return Ok(());
+    }
+
     eprintln!("# enumerating packages ...");
     let all_packages: Vec<PackageInfo<'_>> = db_list
         .iter()
@@ -55,8 +69,9 @@ fn main() {
             db.pkgs()
                 .iter()
                 .filter_map(|pkg| {
-                    pkg_filter_map(&handle, pkg, &pkg_filters)
+                    generate_pkg_info(&handle, pkg, &pkg_filters)
                         .map(|pkg_info| add_reverse_deps(pkg_info, &reverse_deps))
+                        .ok()
                 })
                 .collect::<Vec<_>>()
         })
@@ -70,4 +85,5 @@ fn main() {
 
     eprintln!("");
     eprintln!("# all done.");
+    Ok(())
 }
