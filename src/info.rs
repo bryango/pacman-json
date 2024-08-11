@@ -218,7 +218,7 @@ pub fn add_reverse_deps<'h>(
     }
 }
 
-/// TODO: doc, reverse
+/// TODO: doc, linear
 pub fn recurse_dependencies<'h, T>(
     handle: &'h Alpm,
     databases: T,

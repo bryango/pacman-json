@@ -30,16 +30,11 @@ pub struct PackageFilters {
 
     /// Recursively query the dependencies of the given package;
     /// implies '--all'
-    #[arg(long, group = "deps")]
+    #[arg(long)]
     pub recurse: Option<String>,
 
-    /// Query the reverse dependencies of the given package;
-    /// implies '--all'
-    #[arg(long, group = "deps", conflicts_with = "recurse")]
-    pub reverse: Option<String>,
-
-    /// '--recurse' or '--reverse' optional dependencies as well
-    #[arg(long, requires = "deps")]
+    /// '--recurse' optional dependencies as well
+    #[arg(long, requires = "recurse")]
     pub optional: bool,
 }
 
@@ -53,7 +48,6 @@ pub fn generate_pkg_info<'a>(
 ) -> anyhow::Result<PackageInfo<'a>> {
     // only focus on explicitly installed packages
     if pkg_filters.recurse.is_none()
-        && pkg_filters.reverse.is_none()
         && !pkg_filters.all
         && pkg.reason() != PackageReason::Explicit
     {
