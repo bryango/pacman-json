@@ -37,7 +37,7 @@ pub struct PackageFilters {
     #[arg(long, group = "deps", conflicts_with = "recurse")]
     pub reverse: Option<String>,
 
-    /// '--recurse' or '--reverse' optional dependencies
+    /// '--recurse' or '--reverse' optional dependencies as well
     #[arg(long, requires = "deps")]
     pub optional: bool,
 }

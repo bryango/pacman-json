@@ -59,7 +59,15 @@ fn main() -> anyhow::Result<()> {
         let pkg_info = generate_pkg_info(&handle, pkg, &pkg_filters)?;
         let mut deps_set = HashSet::new();
         let mut deps_pkgs = Vec::new();
-        let _ = recurse_dependencies(&handle, db_list, &pkg_filters, pkg_info, 0, &mut deps_set, &mut deps_pkgs);
+        let _ = recurse_dependencies(
+            &handle,
+            db_list,
+            &pkg_filters,
+            pkg_info,
+            0,
+            &mut deps_set,
+            &mut deps_pkgs,
+        );
 
         eprintln!("");
         eprintln!("# '{}' closure: {} packages:", name, deps_set.len());

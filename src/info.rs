@@ -218,7 +218,7 @@ pub fn add_reverse_deps<'h>(
     }
 }
 
-/// TODO: doc, optional, reverse
+/// TODO: doc, reverse
 pub fn recurse_dependencies<'h, T>(
     handle: &'h Alpm,
     databases: T,
@@ -238,55 +238,55 @@ where
         "# level {}: recursing into '{}': {:?}\n",
         depth, pkg_info.name, pkg_info.depends_on
     );
-    let dependencies = match pkg_filters.optional {
-        true => pkg_info.optional_deps.clone(),
-        false => pkg_info.depends_on.clone(),
+    let mut satisfied_dependencies = |dependencies: PacList<DepInfo<'h>>| -> Vec<DepInfo<'h>> {
+        dependencies
+            .iter()
+            .map(|dep| {
+                let pkg = match db_list.clone().find_satisfier(dep.dep_string.clone()) {
+                    Some(pkg) => pkg,
+                    None => return dep.clone(),
+                };
+                let satisfier = format!("{}={}", pkg.name(), pkg.version());
+                let next_depth = depth + 1;
+                if !deps_set.contains(&satisfier) {
+                    let pkg_info = generate_pkg_info(handle, pkg, pkg_filters)
+                        .unwrap_or(PackageInfo::from(pkg));
+                    recurse_dependencies(
+                        &handle,
+                        databases.clone(),
+                        pkg_filters,
+                        pkg_info,
+                        next_depth,
+                        deps_set,
+                        deps_pkgs,
+                    );
+                } else {
+                    eprintln!(
+                        "# level {}: duplicated dependency: '{}' provides '{}'",
+                        next_depth,
+                        satisfier,
+                        dep.dep_string.clone()
+                    );
+                }
+                DepInfo {
+                    satisfier: Some(satisfier),
+                    ..dep.clone()
+                }
+            })
+            .collect()
     };
-    let satisfied_dependencies: Vec<DepInfo<'h>> = dependencies
-        .iter()
-        .map(|dep| {
-            let pkg = match db_list.clone().find_satisfier(dep.dep_string.clone()) {
-                Some(pkg) => pkg,
-                None => return dep.clone(),
-            };
-            let satisfier = format!("{}={}", pkg.name(), pkg.version());
-            let next_depth = depth + 1;
-            if !deps_set.contains(&satisfier) {
-                let pkg_info =
-                    generate_pkg_info(handle, pkg, pkg_filters).unwrap_or(PackageInfo::from(pkg));
-                recurse_dependencies(
-                    &handle,
-                    databases.clone(),
-                    pkg_filters,
-                    pkg_info,
-                    next_depth,
-                    deps_set,
-                    deps_pkgs,
-                );
-            } else {
-                eprintln!(
-                    "# level {}: duplicated dependency: '{}' provides '{}'",
-                    next_depth,
-                    satisfier,
-                    dep.dep_string.clone()
-                );
-            }
-            DepInfo {
-                satisfier: Some(satisfier),
-                ..dep.clone()
-            }
-        })
-        .collect();
-    deps_pkgs.push(match pkg_filters.optional {
+    let pkg_info = PackageInfo {
+        depends_on: satisfied_dependencies(pkg_info.depends_on).into(),
+        ..pkg_info
+    };
+    let pkg_info = match pkg_filters.optional {
         true => PackageInfo {
-            optional_deps: satisfied_dependencies.into(),
+            optional_deps: satisfied_dependencies(pkg_info.optional_deps).into(),
             ..pkg_info
         },
-        false => PackageInfo {
-            depends_on: satisfied_dependencies.into(),
-            ..pkg_info
-        },
-    });
+        false => pkg_info,
+    };
+    deps_pkgs.push(pkg_info);
 }
 
 /// A newtype [`Vec`] to enclose various lists, e.g. packages, licenses, ...
