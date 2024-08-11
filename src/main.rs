@@ -1,6 +1,6 @@
 use std::collections::HashSet;
 
-use pacjump::info::{add_reverse_deps, recurse_dependencies, PackageInfo};
+use pacjump::info::{recurse_dependencies, PackageInfo};
 use pacjump::reverse_deps::ReverseDependencyMaps;
 use pacjump::siglevel::{default_siglevel, read_conf, repo_siglevel};
 use pacjump::{find_in_databases, generate_pkg_info, PackageFilters};
@@ -56,13 +56,14 @@ fn main() -> anyhow::Result<()> {
 
     let all_packages: Vec<PackageInfo<'_>> = if let Some(name) = pkg_filters.recurse.clone() {
         let pkg = find_in_databases(db_list.clone(), name.clone())?;
-        let pkg_info = generate_pkg_info(&handle, pkg, &pkg_filters)?;
+        let pkg_info = generate_pkg_info(&handle, pkg, &pkg_filters, &reverse_deps)?;
         let mut deps_set = HashSet::new();
         let mut deps_pkgs = Vec::new();
         let _ = recurse_dependencies(
             &handle,
             db_list,
             &pkg_filters,
+            &reverse_deps,
             pkg_info,
             0,
             &mut deps_set,
@@ -84,9 +85,7 @@ fn main() -> anyhow::Result<()> {
                 db.pkgs()
                     .iter()
                     .filter_map(|pkg| {
-                        generate_pkg_info(&handle, pkg, &pkg_filters)
-                            .map(|pkg_info| add_reverse_deps(pkg_info, &reverse_deps))
-                            .ok()
+                        generate_pkg_info(&handle, pkg, &pkg_filters, &reverse_deps).ok()
                     })
                     .collect::<Vec<_>>()
             })

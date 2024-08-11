@@ -4,7 +4,8 @@ pub mod siglevel;
 
 use alpm::{Alpm, Db, Package, PackageReason};
 use clap::Parser;
-use info::{add_local_info, add_sync_info, decode_keyid, PackageInfo};
+use info::{add_local_info, add_reverse_deps, add_sync_info, decode_keyid, PackageInfo};
+use reverse_deps::ReverseDependencyMaps;
 
 /// This struct contains the available filters for pacman packages, exposed
 /// through the command line interface.
@@ -48,6 +49,7 @@ pub fn generate_pkg_info<'a>(
     handle: &'a Alpm,
     pkg: &'a Package,
     pkg_filters: &PackageFilters,
+    reverse_deps: &'a ReverseDependencyMaps,
 ) -> anyhow::Result<PackageInfo<'a>> {
     // only focus on explicitly installed packages
     if pkg_filters.recurse.is_none()
@@ -57,10 +59,11 @@ pub fn generate_pkg_info<'a>(
     {
         anyhow::bail!("{:?} not explicitly installed, skipped", pkg);
     }
-    if pkg_filters.plain {
-        return Ok(PackageInfo::from(pkg));
-    }
-    return Ok(enrich_pkg_info(&handle, pkg, &pkg_filters));
+    let pkg_info = match pkg_filters.plain {
+        true => PackageInfo::from(pkg),
+        false => enrich_pkg_info(&handle, pkg, &pkg_filters),
+    };
+    return Ok(add_reverse_deps(pkg_info, reverse_deps));
 }
 
 /// Enriches package with sync & local database information, if desired and

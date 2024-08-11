@@ -223,6 +223,7 @@ pub fn recurse_dependencies<'h, T>(
     handle: &'h Alpm,
     databases: T,
     pkg_filters: &PackageFilters,
+    reverse_deps: &'h ReverseDependencyMaps,
     pkg_info: PackageInfo<'h>,
     depth: u64,
     deps_set: &mut HashSet<String>,
@@ -249,12 +250,13 @@ where
                 let satisfier = format!("{}={}", pkg.name(), pkg.version());
                 let next_depth = depth + 1;
                 if !deps_set.contains(&satisfier) {
-                    let pkg_info = generate_pkg_info(handle, pkg, pkg_filters)
+                    let pkg_info = generate_pkg_info(handle, pkg, pkg_filters, &reverse_deps)
                         .unwrap_or(PackageInfo::from(pkg));
                     recurse_dependencies(
                         &handle,
                         databases.clone(),
                         pkg_filters,
+                        &reverse_deps,
                         pkg_info,
                         next_depth,
                         deps_set,
