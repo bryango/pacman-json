@@ -1,3 +1,5 @@
+use std::collections::HashSet;
+
 use pacjump::info::{add_reverse_deps, recurse_dependencies, PackageInfo};
 use pacjump::reverse_deps::ReverseDependencyMaps;
 use pacjump::siglevel::{default_siglevel, read_conf, repo_siglevel};
@@ -52,8 +54,11 @@ fn main() -> anyhow::Result<()> {
     if let Some(name) = pkg_filters.recurse.clone() {
         let pkg = find_in_databases(db_list.clone(), &name)?;
         let pkg_info = generate_pkg_info(&handle, pkg, &pkg_filters)?;
-        let info_with_deps = recurse_dependencies(db_list, pkg_info);
+        let mut deps_set = HashSet::new();
+        let info_with_deps = recurse_dependencies(db_list, pkg_info, 0, &mut deps_set);
 
+        // eprint!("done");
+        // eprint!("{:?}", info_with_deps);
         let json = serde_json::to_string(&info_with_deps).expect("failed serializing json");
         println!("{}", json);
 

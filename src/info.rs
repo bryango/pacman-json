@@ -26,7 +26,7 @@ impl<T: Debug> DebugFormat for T {}
 
 /// This is a wrapper of the relevant information of a pacman [`Package`]
 /// for ease of serialization by [`serde`].
-#[derive(Serialize, Clone)]
+#[derive(Serialize, Clone, Debug)]
 pub struct PackageInfo<'h> {
     // #[allow(dead_code)]
     // #[serde(skip)]
@@ -121,7 +121,7 @@ impl<'h> From<&'h Package> for PackageInfo<'h> {
     }
 }
 
-#[derive(Serialize, Clone)]
+#[derive(Serialize, Clone, Debug)]
 struct DepInfo<'h> {
     dep_string: String,
     name: &'h str,
@@ -129,7 +129,7 @@ struct DepInfo<'h> {
     version: Option<&'h str>,
     description: Option<&'h str>,
     name_hash: u64,
-    package_info: Option<PackageInfo<'h>>,
+    package_info: Option<Box<PackageInfo<'h>>>,
 }
 
 impl<'h> From<&'h Dep> for DepInfo<'h> {
@@ -215,12 +215,21 @@ pub fn add_reverse_deps<'h>(
 }
 
 /// TODO: doc, optional, enrich
-pub fn recurse_dependencies<'h, T>(databases: T, pkg_info: PackageInfo<'h>) -> PackageInfo<'h>
+pub fn recurse_dependencies<'h, T>(
+    databases: T,
+    pkg_info: PackageInfo<'h>,
+    depth: u64,
+    deps_set: &mut HashSet<&'h str>,
+) -> PackageInfo<'h>
 where
     T: IntoIterator<Item = &'h Db> + Clone,
 {
     let mut_list = AlpmListMut::from_iter(databases.clone().into_iter());
     let db_list = mut_list.list();
+    eprintln!(
+        "# level {}: recursing into '{}': {:?}\n",
+        depth, pkg_info.name, pkg_info.depends_on
+    );
     let depends_on: Vec<DepInfo<'h>> = pkg_info
         .depends_on
         .iter()
@@ -228,9 +237,20 @@ where
             let package_info = db_list
                 .clone()
                 .find_satisfier(dep.dep_string.clone())
-                .map(|pkg| recurse_dependencies(databases.clone(), PackageInfo::from(pkg)));
+                .map(|pkg| {
+                    let next_depth = depth + 1;
+                    let pkg_name = pkg.name();
+                    let pkg_info = PackageInfo::from(pkg);
+                    if !deps_set.contains(pkg_name) {
+                        deps_set.insert(pkg_name);
+                        recurse_dependencies(databases.clone(), pkg_info, next_depth, deps_set)
+                    } else {
+                        eprintln!("# level {}: duplicated dependency: '{}' provides '{}'", next_depth, pkg_name, dep.dep_string.clone());
+                        pkg_info
+                    }
+                });
             DepInfo {
-                package_info: package_info,
+                package_info: package_info.map(Box::new),
                 ..dep.clone()
             }
         })
@@ -246,7 +266,7 @@ where
 ///
 /// `impl Serialize for AlpmList` does not work due to rust "orphan rules";
 /// see e.g. https://github.com/Ixrec/rust-orphan-rules.
-#[derive(Serialize, Clone, derive_more::Deref, derive_more::From)]
+#[derive(Serialize, Clone, Debug, derive_more::Deref, derive_more::From)]
 struct PacList<T>(Vec<T>);
 
 impl<'a, T: IntoAlpmListItem> From<AlpmList<'a, T>> for PacList<T> {
