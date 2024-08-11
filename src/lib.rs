@@ -11,35 +11,35 @@ use info::{add_local_info, add_sync_info, decode_keyid, PackageInfo};
 #[derive(Debug, Parser)]
 #[command(about)]
 pub struct PackageFilters {
-    /// Query the sync databases; by default we only query the local database
-    /// with the currently installed packages.
+    /// Query the sync databases; by default only the local database
+    /// (of currently installed packages) is queried
     #[arg(long)]
     pub sync: bool,
 
     /// Query all packages, including those not explicitly installed;
-    /// by default only explicitly installed packages are shown.
+    /// by default only explicitly installed packages are shown
     #[arg(long)]
     pub all: bool,
 
     /// Output package info from the current database only; by default we
     /// enrich the output by combining information from both the local
-    /// and the sync databases.
+    /// and the sync databases
     #[arg(long)]
     pub plain: bool,
 
     /// Recursively query the dependencies of the given package;
-    /// implies --all.
+    /// implies '--all'
     #[arg(long, group = "deps")]
     pub recurse: Option<String>,
 
     /// Query the reverse dependencies of the given package;
-    /// implies --all.
+    /// implies '--all'
     #[arg(long, group = "deps", conflicts_with = "recurse")]
     pub reverse: Option<String>,
 
-    /// '--recurse' or '--reverse' optional dependencies.
+    /// '--recurse' or '--reverse' optional dependencies
     #[arg(long, requires = "deps")]
-    pub optional: bool
+    pub optional: bool,
 }
 
 /// Applies an instance of [`PackageFilters`] to a [`alpm::Package`], and
