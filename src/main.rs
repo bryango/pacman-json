@@ -13,7 +13,9 @@ use clap::Parser;
 /// and upstream info is added to the output.
 fn main() -> anyhow::Result<()> {
     #[cfg(debug_assertions)]
-    unsafe { backtrace_on_stack_overflow::enable() };
+    unsafe {
+        backtrace_on_stack_overflow::enable()
+    };
     let pkg_filters = PackageFilters::parse();
 
     let root = read_conf(["RootDir"]).unwrap_or("/".into());
@@ -51,27 +53,23 @@ fn main() -> anyhow::Result<()> {
         vec![handle.localdb()]
     };
 
-    if let Some(name) = pkg_filters.recurse.clone() {
-        let pkg = find_in_databases(db_list.clone(), &name)?;
+    let all_packages: Vec<PackageInfo<'_>> = if let Some(name) = pkg_filters.recurse.clone() {
+        let pkg = find_in_databases(db_list.clone(), name.clone())?;
         let pkg_info = generate_pkg_info(&handle, pkg, &pkg_filters)?;
         let mut deps_set = HashSet::new();
         let mut deps_pkgs = Vec::new();
         let _ = recurse_dependencies(db_list, pkg_info, 0, &mut deps_set, &mut deps_pkgs);
-        deps_pkgs.reverse();
-
-        // eprint!("done");
-        // eprint!("{:?}", info_with_deps);
-        let json = serde_json::to_string(&deps_pkgs).expect("failed serializing json");
-        println!("{}", json);
 
         eprintln!("");
-        eprintln!("# all done.");
+        eprintln!("# '{}' closure: {} packages:", name, deps_set.len());
+        eprintln!("{:#?}", deps_set);
 
-        return Ok(());
-    }
+        deps_pkgs.reverse();
+        deps_pkgs
+    } else {
 
     eprintln!("# enumerating packages ...");
-    let all_packages: Vec<PackageInfo<'_>> = db_list
+    db_list
         .iter()
         .map(|db| {
             eprintln!("{}: {}", db.name(), db.pkgs().len());
@@ -85,7 +83,8 @@ fn main() -> anyhow::Result<()> {
                 .collect::<Vec<_>>()
         })
         .flatten()
-        .collect(); // flattened list of packages
+        .collect() // flattened list of packages
+    };
     eprintln!("# done. Serializing ...");
     eprintln!("");
 

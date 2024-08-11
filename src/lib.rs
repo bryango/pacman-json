@@ -87,7 +87,7 @@ pub fn enrich_pkg_info<'a>(
     // otherwise, the input `pkg` is local:
     let local_pkg = pkg;
     let local_info = base_info;
-    let sync_pkg = match find_in_databases(handle.syncdbs(), local_pkg.name()) {
+    let sync_pkg = match find_in_databases(handle.syncdbs(), local_pkg.name().to_string()) {
         Err(msg) => {
             eprintln!("{}", msg);
             return local_info;
@@ -106,7 +106,7 @@ pub fn enrich_pkg_info<'a>(
 }
 
 /// Locates a Package from some databases by its name.
-pub fn find_in_databases<'a, T>(databases: T, package: &'a str) -> anyhow::Result<&'a Package>
+pub fn find_in_databases<'a, T>(databases: T, package: String) -> anyhow::Result<&'a Package>
 where
     T: IntoIterator<Item = &'a Db>,
 {
@@ -118,10 +118,10 @@ where
     for db in databases {
         // look for a package by name in a database; the database is
         // implemented as a hashmap so this is faster than iterating:
-        match db.pkg(package) {
+        match db.pkg(package.as_str()) {
             Ok(pkg) => return Ok(pkg),
             Err(_) => {}
         }
     }
-    anyhow::bail!("{:?} not found in the sync databases", package)
+    anyhow::bail!("{:?} not found in the sync databases", &package)
 }
