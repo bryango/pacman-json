@@ -2,7 +2,6 @@
 //! information, including functions to encode and decode relevant data.
 
 use alpm::{decode_signature, Alpm, AlpmList, AlpmListMut, Db, Dep, IntoAlpmListItem, Package};
-use rayon::prelude::*;
 use serde::Serialize;
 use std::{collections::HashSet, fmt::Debug};
 
@@ -217,7 +216,7 @@ pub fn add_reverse_deps<'h>(
 
 pub fn recurse_dependencies<'h, T>(databases: T, pkg_info: PackageInfo<'h>) -> PackageInfo<'h>
 where
-    T: IntoIterator<Item = &'h Db> + Clone + Sync,
+    T: IntoIterator<Item = &'h Db> + Clone,
 {
     let mut_list = AlpmListMut::from_iter(databases.clone().into_iter());
     let db_list = mut_list.list();
