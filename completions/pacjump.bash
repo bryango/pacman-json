@@ -19,12 +19,16 @@ _pacjump() {
 
     case "${cmd}" in
         pacjump)
-            opts="-h --sync --all --plain --help"
+            opts="-h --sync --all --plain --recurse --optional --summary --help"
             if [[ ${cur} == -* || ${COMP_CWORD} -eq 1 ]] ; then
                 COMPREPLY=( $(compgen -W "${opts}" -- "${cur}") )
                 return 0
             fi
             case "${prev}" in
+                --recurse)
+                    COMPREPLY=($(compgen -f "${cur}"))
+                    return 0
+                    ;;
                 *)
                     COMPREPLY=()
                     ;;
