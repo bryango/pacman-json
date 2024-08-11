@@ -36,6 +36,10 @@ pub struct PackageFilters {
     /// '--recurse' optional dependencies as well
     #[arg(long, requires = "recurse")]
     pub optional: bool,
+
+    /// '--recurse' dependencies, but only prints package names and versions
+    #[arg(long, requires = "recurse")]
+    pub summary: bool,
 }
 
 /// Applies an instance of [`PackageFilters`] to a [`alpm::Package`], and

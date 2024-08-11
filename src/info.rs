@@ -288,7 +288,11 @@ where
         },
         false => pkg_info,
     };
-    deps_pkgs.push(pkg_info);
+    if pkg_filters.summary {
+        return;
+    } else {
+        deps_pkgs.push(pkg_info);
+    }
 }
 
 /// A newtype [`Vec`] to enclose various lists, e.g. packages, licenses, ...

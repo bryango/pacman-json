@@ -74,6 +74,15 @@ fn main() -> anyhow::Result<()> {
         eprintln!("# '{}' closure: {} packages:", name, deps_set.len());
         eprintln!("{:#?}", deps_set);
 
+        if pkg_filters.summary {
+            let mut deps_names = Vec::from_iter(deps_set);
+            deps_names.sort();
+            for dep in deps_names {
+                println!("{}", dep)
+            }
+            return Ok(())
+        }
+
         deps_pkgs.reverse();
         deps_pkgs
     } else {
