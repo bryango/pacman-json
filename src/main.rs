@@ -56,11 +56,12 @@ fn main() -> anyhow::Result<()> {
         let pkg_info = generate_pkg_info(&handle, pkg, &pkg_filters)?;
         let mut deps_set = HashSet::new();
         let mut deps_pkgs = Vec::new();
-        let info_with_deps = recurse_dependencies(db_list, pkg_info, 0, &mut deps_set, &mut deps_pkgs);
+        let _ = recurse_dependencies(db_list, pkg_info, 0, &mut deps_set, &mut deps_pkgs);
+        deps_pkgs.reverse();
 
         // eprint!("done");
         // eprint!("{:?}", info_with_deps);
-        let json = serde_json::to_string(&info_with_deps).expect("failed serializing json");
+        let json = serde_json::to_string(&deps_pkgs).expect("failed serializing json");
         println!("{}", json);
 
         eprintln!("");

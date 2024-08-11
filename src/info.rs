@@ -220,13 +220,12 @@ pub fn recurse_dependencies<'h, T>(
     pkg_info: PackageInfo<'h>,
     depth: u64,
     deps_set: &mut HashSet<String>,
-    deps_pkgs: &mut Vec<PackageInfo<'h>>
-) -> PackageInfo<'h>
+    deps_pkgs: &mut Vec<PackageInfo<'h>>,
+) -> ()
 where
     T: IntoIterator<Item = &'h Db> + Clone,
 {
     deps_set.insert(format!("{}={}", pkg_info.name, pkg_info.version));
-    deps_pkgs.push(pkg_info.clone());
     let mut_list = AlpmListMut::from_iter(databases.clone().into_iter());
     let db_list = mut_list.list();
     eprintln!(
@@ -245,9 +244,20 @@ where
                     let next_depth = depth + 1;
                     let pkg_info = PackageInfo::from(pkg);
                     if !deps_set.contains(&satisfier) {
-                        recurse_dependencies(databases.clone(), pkg_info, next_depth, deps_set, deps_pkgs);
+                        recurse_dependencies(
+                            databases.clone(),
+                            pkg_info,
+                            next_depth,
+                            deps_set,
+                            deps_pkgs,
+                        );
                     } else {
-                        eprintln!("# level {}: duplicated dependency: '{}' provides '{}'", next_depth, satisfier, dep.dep_string.clone());
+                        eprintln!(
+                            "# level {}: duplicated dependency: '{}' provides '{}'",
+                            next_depth,
+                            satisfier,
+                            dep.dep_string.clone()
+                        );
                     }
                     satisfier
                 });
@@ -257,10 +267,10 @@ where
             }
         })
         .collect();
-    PackageInfo {
+    deps_pkgs.push(PackageInfo {
         depends_on: depends_on.into(),
         ..pkg_info
-    }
+    });
 }
 
 /// A newtype [`Vec`] to enclose various lists, e.g. packages, licenses, ...
