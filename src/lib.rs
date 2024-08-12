@@ -1,4 +1,5 @@
 pub mod info;
+pub mod recurse_deps;
 pub mod reverse_deps;
 pub mod siglevel;
 

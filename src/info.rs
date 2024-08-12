@@ -1,16 +1,11 @@
 //! This module defines the [`PackageInfo`] struct for serializing package
 //! information, including functions to encode and decode relevant data.
 
-use alpm::{decode_signature, Alpm, AlpmList, AlpmListMut, Db, Dep, IntoAlpmListItem, Package};
-use indexmap::IndexSet;
+use alpm::{decode_signature, Alpm, AlpmList, Dep, IntoAlpmListItem, Package};
 use serde::Serialize;
 use std::{collections::HashSet, fmt::Debug};
 
-use crate::{
-    generate_pkg_info,
-    reverse_deps::{RevDepsMap, ReverseDependencyMaps},
-    PackageFilters,
-};
+use crate::reverse_deps::{RevDepsMap, ReverseDependencyMaps};
 
 trait DebugFormat {
     /// Formats an object to [`Box<str>`] with its [`Debug`] info
@@ -36,48 +31,48 @@ pub struct PackageInfo<'h> {
     // #[allow(dead_code)]
     // #[serde(skip)]
     // package: Package<'h>,
-    repository: Option<&'h str>,
-    name: &'h str,
-    version: &'h str,
-    description: Option<&'h str>,
-    architecture: Option<&'h str>,
-    url: Option<&'h str>,
-    licenses: PacList<&'h str>,
-    groups: PacList<&'h str>,
-    provides: PacList<DepInfo<'h>>,
-    depends_on: PacList<DepInfo<'h>>,
-    optional_deps: PacList<DepInfo<'h>>,
-    makedepends: PacList<DepInfo<'h>>,
-    checkdepends: PacList<DepInfo<'h>>,
-    conflicts_with: PacList<DepInfo<'h>>,
-    replaces: PacList<DepInfo<'h>>,
+    pub repository: Option<&'h str>,
+    pub name: &'h str,
+    pub version: &'h str,
+    pub description: Option<&'h str>,
+    pub architecture: Option<&'h str>,
+    pub url: Option<&'h str>,
+    pub licenses: PacList<&'h str>,
+    pub groups: PacList<&'h str>,
+    pub provides: PacList<DepInfo<'h>>,
+    pub depends_on: PacList<DepInfo<'h>>,
+    pub optional_deps: PacList<DepInfo<'h>>,
+    pub makedepends: PacList<DepInfo<'h>>,
+    pub checkdepends: PacList<DepInfo<'h>>,
+    pub conflicts_with: PacList<DepInfo<'h>>,
+    pub replaces: PacList<DepInfo<'h>>,
 
     /// [`PackageInfo::required_by`] and similarly, `optional_for`
     /// and `required_by_{make,check}` are reverse dependencies; they are
     /// computed on demand with the [`add_reverse_deps`] function.
-    required_by: HashSet<String>,
-    optional_for: HashSet<String>,
-    required_by_make: HashSet<String>,
-    required_by_check: HashSet<String>,
+    pub required_by: HashSet<String>,
+    pub optional_for: HashSet<String>,
+    pub required_by_make: HashSet<String>,
+    pub required_by_check: HashSet<String>,
 
     /// `download_size` and `compressed_size` are the same;
     /// both are `alpm_pkg_get_size` so we implement only one of them.
-    download_size: i64,
-    installed_size: i64,
-    packager: Option<&'h str>,
-    build_date: i64,
-    install_date: Option<i64>,
-    install_reason: Box<str>,
-    install_script: bool,
-    md5_sum: Option<&'h str>,
-    sha_256_sum: Option<&'h str>,
-    signatures: Option<&'h str>,
+    pub download_size: i64,
+    pub installed_size: i64,
+    pub packager: Option<&'h str>,
+    pub build_date: i64,
+    pub install_date: Option<i64>,
+    pub install_reason: Box<str>,
+    pub install_script: bool,
+    pub md5_sum: Option<&'h str>,
+    pub sha_256_sum: Option<&'h str>,
+    pub signatures: Option<&'h str>,
 
     /// `key_id` is set to None when initialized; it can be decoded on-demand
     /// with the [`Alpm`] handle with the [`decode_keyid`] function.
-    key_id: Option<Vec<Box<str>>>,
-    validated_by: Box<str>,
-    sync_with: Option<Box<PackageInfo<'h>>>,
+    pub key_id: Option<Vec<Box<str>>>,
+    pub validated_by: Box<str>,
+    pub sync_with: Option<Box<PackageInfo<'h>>>,
 }
 
 impl<'h> From<&'h Package> for PackageInfo<'h> {
@@ -127,14 +122,14 @@ impl<'h> From<&'h Package> for PackageInfo<'h> {
 }
 
 #[derive(Serialize, Clone, Debug)]
-struct DepInfo<'h> {
-    dep_string: String,
-    name: &'h str,
-    depmod: Box<str>,
-    version: Option<&'h str>,
-    description: Option<&'h str>,
-    name_hash: u64,
-    satisfier: Option<String>,
+pub struct DepInfo<'h> {
+    pub dep_string: String,
+    pub name: &'h str,
+    pub depmod: Box<str>,
+    pub version: Option<&'h str>,
+    pub description: Option<&'h str>,
+    pub name_hash: u64,
+    pub satisfier: Option<String>,
 }
 
 impl<'h> From<&'h Dep> for DepInfo<'h> {
@@ -219,90 +214,13 @@ pub fn add_reverse_deps<'h>(
     }
 }
 
-/// TODO: doc
-pub fn recurse_dependencies<'h, T>(
-    handle: &'h Alpm,
-    databases: T,
-    pkg_filters: &PackageFilters,
-    reverse_deps: &'h ReverseDependencyMaps,
-    pkg_info: PackageInfo<'h>,
-    depth: u64,
-    deps_set: &mut IndexSet<String>,
-    deps_pkgs: &mut Vec<PackageInfo<'h>>,
-) -> ()
-where
-    T: IntoIterator<Item = &'h Db> + Clone,
-{
-    eprintln!(
-        "# level {}: recursing into '{}': {:?}\n",
-        depth, pkg_info.name, pkg_info.depends_on
-    );
-    deps_set.insert(format!("{}={}", pkg_info.name, pkg_info.version));
-    let mut_list = AlpmListMut::from_iter(databases.clone().into_iter());
-    let db_list = mut_list.list();
-    let mut satisfied_dependencies = |dependencies: PacList<DepInfo<'h>>| -> Vec<DepInfo<'h>> {
-        dependencies
-            .iter()
-            .map(|dep| {
-                let pkg = match db_list.clone().find_satisfier(dep.dep_string.clone()) {
-                    Some(pkg) => pkg,
-                    None => return dep.clone(),
-                };
-                let satisfier = format!("{}={}", pkg.name(), pkg.version());
-                let next_depth = depth + 1;
-                if !deps_set.contains(&satisfier) {
-                    let pkg_info = generate_pkg_info(handle, pkg, pkg_filters, &reverse_deps)
-                        .unwrap_or(PackageInfo::from(pkg));
-                    recurse_dependencies(
-                        &handle,
-                        databases.clone(),
-                        pkg_filters,
-                        &reverse_deps,
-                        pkg_info,
-                        next_depth,
-                        deps_set,
-                        deps_pkgs,
-                    );
-                } else {
-                    eprintln!(
-                        "# level {}: duplicated dependency: '{}' provides '{}'",
-                        next_depth,
-                        satisfier,
-                        dep.dep_string.clone()
-                    );
-                }
-                DepInfo {
-                    satisfier: Some(satisfier),
-                    ..dep.clone()
-                }
-            })
-            .collect()
-    };
-    let pkg_info = match pkg_filters.optional {
-        true => PackageInfo {
-            depends_on: satisfied_dependencies(pkg_info.depends_on).into(),
-            optional_deps: satisfied_dependencies(pkg_info.optional_deps).into(),
-            ..pkg_info
-        },
-        false => PackageInfo {
-            depends_on: satisfied_dependencies(pkg_info.depends_on).into(),
-            ..pkg_info
-        },
-    };
-    if pkg_filters.summary {
-        return;
-    } else {
-        deps_pkgs.push(pkg_info);
-    }
-}
-
 /// A newtype [`Vec`] to enclose various lists, e.g. packages, licenses, ...
 /// returned from alpm. Conversions from [`AlpmList`] are implemented.
 ///
 /// `impl Serialize for AlpmList` does not work due to rust "orphan rules";
 /// see e.g. https://github.com/Ixrec/rust-orphan-rules.
 #[derive(Serialize, Clone, Debug, derive_more::Deref, derive_more::From)]
-struct PacList<T>(Vec<T>);
+pub struct PacList<T>(Vec<T>);
 
 impl<'a, T: IntoAlpmListItem> From<AlpmList<'a, T>> for PacList<T> {
     fn from(alpm_list: AlpmList<'a, T>) -> Self {

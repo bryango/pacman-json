@@ -1,4 +1,5 @@
-use pacjump::info::{recurse_dependencies, PackageInfo};
+use pacjump::info::PackageInfo;
+use pacjump::recurse_deps::recurse_dependencies;
 use pacjump::reverse_deps::ReverseDependencyMaps;
 use pacjump::siglevel::{default_siglevel, read_conf, repo_siglevel};
 use pacjump::{find_in_databases, generate_pkg_info, PackageFilters};
