@@ -33,7 +33,7 @@ pub struct PackageFilters {
     #[arg(long)]
     pub recurse: Option<String>,
 
-    /// '--recurse' optional dependencies as well
+    /// '--recurse' installed optional dependencies as well
     #[arg(long, requires = "recurse")]
     pub optional: bool,
 

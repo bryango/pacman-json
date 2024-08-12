@@ -70,8 +70,9 @@ fn main() -> anyhow::Result<()> {
         );
 
         eprintln!("");
-        eprintln!("# '{}' closure: {} packages:", name, deps_set.len());
         eprintln!("{:#?}", deps_set);
+        eprintln!("# '{}' closure: {} packages", name, deps_set.len());
+        eprintln!("");
 
         if pkg_filters.summary {
             for dep in deps_set {
@@ -83,7 +84,7 @@ fn main() -> anyhow::Result<()> {
         deps_pkgs.reverse();
         deps_pkgs
     } else {
-        eprintln!("# enumerating packages ...");
+        eprintln!("# enumerating all packages ...");
         db_list
             .iter()
             .map(|db| {

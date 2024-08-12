@@ -219,7 +219,7 @@ pub fn add_reverse_deps<'h>(
     }
 }
 
-/// TODO: doc, linear
+/// TODO: doc
 pub fn recurse_dependencies<'h, T>(
     handle: &'h Alpm,
     databases: T,
@@ -278,16 +278,16 @@ where
             })
             .collect()
     };
-    let pkg_info = PackageInfo {
-        depends_on: satisfied_dependencies(pkg_info.depends_on).into(),
-        ..pkg_info
-    };
     let pkg_info = match pkg_filters.optional {
         true => PackageInfo {
+            depends_on: satisfied_dependencies(pkg_info.depends_on).into(),
             optional_deps: satisfied_dependencies(pkg_info.optional_deps).into(),
             ..pkg_info
         },
-        false => pkg_info,
+        false => PackageInfo {
+            depends_on: satisfied_dependencies(pkg_info.depends_on).into(),
+            ..pkg_info
+        },
     };
     if pkg_filters.summary {
         return;
