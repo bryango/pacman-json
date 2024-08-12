@@ -3,9 +3,11 @@
 
 use alpm::{decode_signature, Alpm, AlpmList, Dep, IntoAlpmListItem, Package};
 use serde::Serialize;
-use std::{collections::HashSet, fmt::Debug};
+use std::{collections::BTreeSet, fmt::Debug};
 
 use crate::reverse_deps::{RevDepsMap, ReverseDependencyMaps};
+
+static EMPTY_REV_DEPS: BTreeSet<String> = BTreeSet::new();
 
 trait DebugFormat {
     /// Formats an object to [`Box<str>`] with its [`Debug`] info
@@ -50,10 +52,10 @@ pub struct PackageInfo<'h> {
     /// [`PackageInfo::required_by`] and similarly, `optional_for`
     /// and `required_by_{make,check}` are reverse dependencies; they are
     /// computed on demand with the [`add_reverse_deps`] function.
-    pub required_by: HashSet<String>,
-    pub optional_for: HashSet<String>,
-    pub required_by_make: HashSet<String>,
-    pub required_by_check: HashSet<String>,
+    pub required_by: &'h BTreeSet<String>,
+    pub optional_for: &'h BTreeSet<String>,
+    pub required_by_make: &'h BTreeSet<String>,
+    pub required_by_check: &'h BTreeSet<String>,
 
     /// `download_size` and `compressed_size` are the same;
     /// both are `alpm_pkg_get_size` so we implement only one of them.
@@ -98,10 +100,10 @@ impl<'h> From<&'h Package> for PackageInfo<'h> {
             optional_deps: pkg.optdepends().into(),
             makedepends: pkg.makedepends().into(),
             checkdepends: pkg.checkdepends().into(),
-            required_by: [].into(),
-            optional_for: [].into(),
-            required_by_make: [].into(),
-            required_by_check: [].into(),
+            required_by: &EMPTY_REV_DEPS,
+            optional_for: &EMPTY_REV_DEPS,
+            required_by_make: &EMPTY_REV_DEPS,
+            required_by_check: &EMPTY_REV_DEPS,
             conflicts_with: pkg.conflicts().into(),
             replaces: pkg.replaces().into(),
             download_size: pkg.size(),
@@ -200,10 +202,10 @@ pub fn add_reverse_deps<'h>(
     pkg_info: PackageInfo<'h>,
     reverse_deps: &'h ReverseDependencyMaps,
 ) -> PackageInfo<'h> {
-    let get = |rev_deps_map: &RevDepsMap| {
+    let get = |rev_deps_map: &'h RevDepsMap| {
         rev_deps_map
             .get(pkg_info.name)
-            .map_or(HashSet::new(), |x| x.to_owned())
+            .unwrap_or(&EMPTY_REV_DEPS)
     };
     PackageInfo {
         required_by: get(&reverse_deps.required_by),

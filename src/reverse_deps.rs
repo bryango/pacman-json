@@ -1,5 +1,6 @@
 //! This module generates different kinds of reverse dependencies from pacman
-//! sync databases and gathers them in a big [`HashMap`]. The key ingredient,
+//! sync databases and gathers them in a big [`HashMap`] from package names to
+//! their respective [`BTreeSet`]s of reverse dependencies. The key ingredient,
 //! [`get_reverse_deps_map`], is stolen from <https://github.com/jelly/pacquery>.
 //!
 //! Note that [`alpm::Package`] does provide reverse dependency information
@@ -14,11 +15,11 @@
 //! See e.g. `alpm_sys::ffi::alpm_pkg_compute_requiredby()`.
 
 use alpm::{Alpm, AlpmList, Dep, Package};
-use std::collections::{HashMap, HashSet};
+use std::collections::{HashMap, BTreeSet};
 
 /// A map of reverse dependencies, from a package's name to the names of
 /// packages that are dependent on it.
-pub type RevDepsMap = HashMap<String, HashSet<String>>;
+pub type RevDepsMap = HashMap<String, BTreeSet<String>>;
 
 /// Retrieves a HashMap of all reverse dependencies. This function is ported
 /// from: <https://github.com/jelly/pacquery>.
@@ -38,7 +39,7 @@ pub fn get_reverse_deps_map(
                         e.insert(pkg.name().to_string());
                     })
                     .or_insert_with(|| {
-                        let mut modify = HashSet::new();
+                        let mut modify = BTreeSet::new();
                         modify.insert(pkg.name().to_string());
                         modify
                     });
