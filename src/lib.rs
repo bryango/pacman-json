@@ -51,9 +51,7 @@ pub fn generate_pkg_info<'a>(
     reverse_deps: &'a ReverseDependencyMaps,
 ) -> anyhow::Result<PackageInfo<'a>> {
     // only focus on explicitly installed packages
-    if pkg_filters.recurse.is_none()
-        && !pkg_filters.all
-        && pkg.reason() != PackageReason::Explicit
+    if pkg_filters.recurse.is_none() && !pkg_filters.all && pkg.reason() != PackageReason::Explicit
     {
         anyhow::bail!("{:?} not explicitly installed, skipped", pkg);
     }

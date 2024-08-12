@@ -2,6 +2,7 @@
 //! information, including functions to encode and decode relevant data.
 
 use alpm::{decode_signature, Alpm, AlpmList, AlpmListMut, Db, Dep, IntoAlpmListItem, Package};
+use indexmap::IndexSet;
 use serde::Serialize;
 use std::{collections::HashSet, fmt::Debug};
 
@@ -226,19 +227,19 @@ pub fn recurse_dependencies<'h, T>(
     reverse_deps: &'h ReverseDependencyMaps,
     pkg_info: PackageInfo<'h>,
     depth: u64,
-    deps_set: &mut HashSet<String>,
+    deps_set: &mut IndexSet<String>,
     deps_pkgs: &mut Vec<PackageInfo<'h>>,
 ) -> ()
 where
     T: IntoIterator<Item = &'h Db> + Clone,
 {
-    deps_set.insert(format!("{}={}", pkg_info.name, pkg_info.version));
-    let mut_list = AlpmListMut::from_iter(databases.clone().into_iter());
-    let db_list = mut_list.list();
     eprintln!(
         "# level {}: recursing into '{}': {:?}\n",
         depth, pkg_info.name, pkg_info.depends_on
     );
+    deps_set.insert(format!("{}={}", pkg_info.name, pkg_info.version));
+    let mut_list = AlpmListMut::from_iter(databases.clone().into_iter());
+    let db_list = mut_list.list();
     let mut satisfied_dependencies = |dependencies: PacList<DepInfo<'h>>| -> Vec<DepInfo<'h>> {
         dependencies
             .iter()

@@ -1,5 +1,3 @@
-use std::collections::HashSet;
-
 use pacjump::info::{recurse_dependencies, PackageInfo};
 use pacjump::reverse_deps::ReverseDependencyMaps;
 use pacjump::siglevel::{default_siglevel, read_conf, repo_siglevel};
@@ -7,6 +5,7 @@ use pacjump::{find_in_databases, generate_pkg_info, PackageFilters};
 
 use alpm::Alpm;
 use clap::Parser;
+use indexmap::IndexSet;
 
 /// Dumps json data of the explicitly installed pacman packages.
 /// Local packages are matched against the sync databases,
@@ -57,7 +56,7 @@ fn main() -> anyhow::Result<()> {
     let all_packages: Vec<PackageInfo<'_>> = if let Some(name) = pkg_filters.recurse.clone() {
         let pkg = find_in_databases(db_list.clone(), name.clone())?;
         let pkg_info = generate_pkg_info(&handle, pkg, &pkg_filters, &reverse_deps)?;
-        let mut deps_set = HashSet::new();
+        let mut deps_set = IndexSet::new();
         let mut deps_pkgs = Vec::new();
         let _ = recurse_dependencies(
             &handle,
@@ -75,12 +74,10 @@ fn main() -> anyhow::Result<()> {
         eprintln!("{:#?}", deps_set);
 
         if pkg_filters.summary {
-            let mut deps_names = Vec::from_iter(deps_set);
-            deps_names.sort();
-            for dep in deps_names {
+            for dep in deps_set {
                 println!("{}", dep)
             }
-            return Ok(())
+            return Ok(());
         }
 
         deps_pkgs.reverse();
