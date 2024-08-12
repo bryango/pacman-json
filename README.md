@@ -1,5 +1,5 @@
 # pacjump
-**pac**man **j**son **dump**: dump pacman packages information in JSON.
+**pac**man **j**son d**ump**: dump pacman packages information in JSON.
 
 This package focuses on the local pacman database, yet it borrows some key
 ingredients from https://github.com/jelly/pacquery which focuses more on the
@@ -27,6 +27,15 @@ cat pacman-explicits.json | jq --raw-output '
     | select( .packager | contains("@archlinux.org") | not)
     | "\(.name), \(.repository), \(.packager)"
 '
+```
+
+To collect all the dependencies of a single package (in this example,
+`texstudio`), and compute the size of this closure:
+
+```bash
+pacjump --recurse=texstudio \
+  | jq '[ .[].installed_size ] | add' \
+  | numfmt --to=iec
 ```
 
 Additional options can be found with `pacjump --help`. Shell completions

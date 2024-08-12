@@ -5,7 +5,10 @@ use crate::info::{DepInfo, PacList, PackageInfo};
 use crate::reverse_deps::ReverseDependencyMaps;
 use crate::{generate_pkg_info, PackageFilters};
 
-/// TODO: doc
+/// Recurses the dependency tree of a [`PackageInfo`], finds the packages
+/// satisfying the dependency requirements, collects the satisfiers' data
+/// into a mutable [`IndexSet`], and adds the satisfiers' [`PackageInfo`]s
+/// into a mutable [`Vec`].
 pub fn recurse_dependencies<'h, T>(
     handle: &'h Alpm,
     databases: T,
