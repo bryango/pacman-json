@@ -19,7 +19,7 @@ _pacjump() {
 '--sync[Query the sync databases; by default only the local database (of currently installed packages) is queried]' \
 '--all[Query all packages, including those not explicitly installed; by default only explicitly installed packages are shown]' \
 '--plain[Output package info from the current database only; by default we enrich the output by combining information from both the local and the sync databases]' \
-'--optional['\''--recurse'\'' optional dependencies as well]' \
+'--optional['\''--recurse'\'' installed optional dependencies as well]' \
 '--summary['\''--recurse'\'' dependencies, but only prints package names and versions]' \
 '-h[Print help]' \
 '--help[Print help]' \
