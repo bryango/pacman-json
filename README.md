@@ -29,13 +29,21 @@ cat pacman-explicits.json | jq --raw-output '
 '
 ```
 
-To collect all the dependencies of a single package (in this example,
+Collect all the dependencies of a single package (in this example,
 `texstudio`), and compute the size of this closure:
 
 ```bash
 pacjump --recurse=texstudio \
   | jq '[ .[].installed_size ] | add' \
   | numfmt --to=iec
+```
+
+Sort dependencies by their installed sizes:
+
+```bash
+pacjump --recurse=texstudio | jq '
+  [ sort_by(.installed_size).[] | { (.name): .installed_size } ] | add
+'
 ```
 
 Additional options can be found with `pacjump --help`. Shell completions
