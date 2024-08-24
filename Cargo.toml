@@ -7,7 +7,7 @@ authors = ["Bryan Lai <bryanlais@gmail.com>"]
 keywords = ["archlinux", "json", "alpm"]
 categories = ["command-line-utilities"]
 readme = "README.md"
-license-file = "LICENSE"
+license = "GPL-3.0-only"
 edition = "2021"
 default-run = "pacjump"
 
