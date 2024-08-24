@@ -166,30 +166,30 @@ impl<'h> From<&'h Dep> for DepInfo<'h> {
     }
 }
 
-/// Decodes the signature & extracts the key ID
-pub fn decode_keyid<'h>(handle: &'h Alpm, pkg_info: PackageInfo<'h>) -> PackageInfo<'h> {
-    let sig = match pkg_info.signatures {
-        None => return pkg_info,
-        Some(sig) => decode_signature(sig),
-    };
-    let res = match sig {
-        Err(err) => vec![err.format()],
-        Ok(decoded) => handle.extract_keyid(pkg_info.name, &decoded).map_or_else(
-            |err| vec![err.format()],
-            |keys| {
-                keys.into_iter()
-                    .map(|x| x.into_boxed_str())
-                    .collect::<Vec<_>>()
-            },
-        ),
-    };
-    PackageInfo {
-        key_id: Some(res),
-        ..pkg_info
-    }
-}
-
 impl<'h> PackageInfo<'h> {
+    /// Decodes the signature & extracts the key ID
+    pub fn decode_keyid(self, handle: &'h Alpm) -> PackageInfo<'h> {
+        let sig = match self.signatures {
+            None => return self,
+            Some(sig) => decode_signature(sig),
+        };
+        let res = match sig {
+            Err(err) => vec![err.format()],
+            Ok(decoded) => handle.extract_keyid(self.name, &decoded).map_or_else(
+                |err| vec![err.format()],
+                |keys| {
+                    keys.into_iter()
+                        .map(|x| x.into_boxed_str())
+                        .collect::<Vec<_>>()
+                },
+            ),
+        };
+        PackageInfo {
+            key_id: Some(res),
+            ..self
+        }
+    }
+
     /// Adds sync database info to a local package
     pub fn add_sync_info(self, sync_info: PackageInfo<'h>) -> PackageInfo<'h> {
         let local_info = self;

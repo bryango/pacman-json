@@ -5,7 +5,7 @@ pub mod siglevel;
 
 use alpm::{Alpm, Db, Package, PackageReason};
 use clap::Parser;
-use info::{add_reverse_deps, decode_keyid, PackageInfo};
+use info::{add_reverse_deps, PackageInfo};
 use reverse_deps::ReverseDependencyMaps;
 
 /// Available filters for pacman packages, exposed
@@ -75,7 +75,7 @@ fn enrich_pkg_info<'a>(
 
     if pkg_filters.sync {
         let sync_pkg = pkg;
-        let sync_info = decode_keyid(&handle, base_info);
+        let sync_info = base_info.decode_keyid(&handle);
         if pkg_filters.plain {
             return sync_info;
         }
@@ -98,7 +98,7 @@ fn enrich_pkg_info<'a>(
         }
         Ok(x) => x,
     };
-    let sync_info = decode_keyid(&handle, PackageInfo::from(sync_pkg));
+    let sync_info = PackageInfo::from(sync_pkg).decode_keyid(&handle);
 
     return match pkg_filters.plain
         || local_pkg.packager() != sync_pkg.packager()
