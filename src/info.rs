@@ -90,13 +90,13 @@ pub struct PackageInfo<'h> {
     /// with the [`Alpm`] handle with the [`decode_keyid`] function.
     pub key_id: Option<Vec<Box<str>>>,
     pub validated_by: Box<str>,
-    pub sync_with: Option<Box<PackageInfo<'h>>>,
+    pub sync_with: Option<Box<Self>>,
 }
 
 impl<'h> From<&'h Package> for PackageInfo<'h> {
     /// Converts an alpm [`Package`] to a [`PackageInfo`] containing the
     /// relevant information, to be serialized.
-    fn from(pkg: &'h Package) -> PackageInfo<'h> {
+    fn from(pkg: &'h Package) -> Self {
         let db = pkg.db().map(|db| db.name());
         let name = pkg.name();
         // eprintln!("{:?}: {}", db, name);
@@ -153,7 +153,7 @@ pub struct DepInfo<'h> {
 }
 
 impl<'h> From<&'h Dep> for DepInfo<'h> {
-    fn from(dep: &'h Dep) -> DepInfo<'h> {
+    fn from(dep: &'h Dep) -> Self {
         Self {
             dep_string: dep.to_string(),
             name: dep.name(),
@@ -167,8 +167,8 @@ impl<'h> From<&'h Dep> for DepInfo<'h> {
 }
 
 impl<'h> PackageInfo<'h> {
-    /// Decodes the signature & extracts the key ID
-    pub fn decode_keyid(self, handle: &'h Alpm) -> PackageInfo<'h> {
+    /// Decodes the signature with an [`Alpm`] handle and extracts the key ID
+    pub fn decode_keyid(self, handle: &'h Alpm) -> Self {
         let sig = match self.signatures {
             None => return self,
             Some(sig) => decode_signature(sig),
@@ -191,7 +191,7 @@ impl<'h> PackageInfo<'h> {
     }
 
     /// Adds sync database info to a local package
-    pub fn add_sync_info(self, sync_info: PackageInfo<'h>) -> PackageInfo<'h> {
+    pub fn add_sync_info(self, sync_info: Self) -> Self {
         let local_info = self;
         PackageInfo {
             sync_with: Some(Box::new(sync_info)),
@@ -200,7 +200,7 @@ impl<'h> PackageInfo<'h> {
     }
 
     /// Adds local database info to a sync package
-    pub fn add_local_info(self, local_info: PackageInfo<'h>) -> PackageInfo<'h> {
+    pub fn add_local_info(self, local_info: Self) -> Self {
         let sync_info = self;
         let reason = local_info.install_reason.clone(); // otherwise partial move
         PackageInfo {
@@ -211,21 +211,18 @@ impl<'h> PackageInfo<'h> {
             ..sync_info
         }
     }
-}
 
-/// Adds reverse dependencies information to a package
-pub fn add_reverse_deps<'h>(
-    pkg_info: PackageInfo<'h>,
-    reverse_deps: &'h ReverseDependencyMaps,
-) -> PackageInfo<'h> {
-    let get =
-        |rev_deps_map: &'h RevDepsMap| rev_deps_map.get(pkg_info.name).unwrap_or(&EMPTY_REV_DEPS);
-    PackageInfo {
-        required_by: get(&reverse_deps.required_by),
-        optional_for: get(&reverse_deps.optional_for),
-        required_by_make: get(&reverse_deps.required_by_make),
-        required_by_check: get(&reverse_deps.required_by_check),
-        ..pkg_info
+    /// Adds reverse dependencies information to a package
+    pub fn add_reverse_deps(self, reverse_deps: &'h ReverseDependencyMaps) -> Self {
+        let get =
+            |rev_deps_map: &'h RevDepsMap| rev_deps_map.get(self.name).unwrap_or(&EMPTY_REV_DEPS);
+        PackageInfo {
+            required_by: get(&reverse_deps.required_by),
+            optional_for: get(&reverse_deps.optional_for),
+            required_by_make: get(&reverse_deps.required_by_make),
+            required_by_check: get(&reverse_deps.required_by_check),
+            ..self
+        }
     }
 }
 

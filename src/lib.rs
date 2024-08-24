@@ -5,7 +5,7 @@ pub mod siglevel;
 
 use alpm::{Alpm, Db, Package, PackageReason};
 use clap::Parser;
-use info::{add_reverse_deps, PackageInfo};
+use info::PackageInfo;
 use reverse_deps::ReverseDependencyMaps;
 
 /// Available filters for pacman packages, exposed
@@ -60,7 +60,7 @@ pub fn generate_pkg_info<'a>(
         true => PackageInfo::from(pkg),
         false => enrich_pkg_info(&handle, pkg, &pkg_filters),
     };
-    return Ok(add_reverse_deps(pkg_info, reverse_deps));
+    return Ok(pkg_info.add_reverse_deps(reverse_deps));
 }
 
 /// Enriches package with sync & local database information, if desired and
