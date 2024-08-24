@@ -227,17 +227,20 @@ impl<'h> PackageInfo<'h> {
 }
 
 /// A newtype [`Vec`] to enclose various lists, e.g. packages, licenses, ...
-/// returned from alpm. Conversions from [`AlpmList`] are implemented.
+/// returned from alpm. This serves as a proxy for [`AlpmList`] to be
+/// [`Serialize`]d; conversions from [`AlpmList`] are implemented.
 ///
-/// `impl Serialize for AlpmList` does not work due to rust "orphan rules";
+/// Note that the naive <code>impl [Serialize] for [AlpmList]</code>
+/// does not work due to rust "orphan rules";
 /// see e.g. <https://github.com/Ixrec/rust-orphan-rules>.
+///
 #[derive(Serialize, Clone, Debug, derive_more::Deref, derive_more::From)]
 pub struct PacList<T>(Vec<T>);
 
 impl<'a, T: IntoAlpmListItem> From<AlpmList<'a, T>> for PacList<T> {
     fn from(alpm_list: AlpmList<'a, T>) -> Self {
         let vector: Vec<_> = alpm_list.into_iter().collect();
-        PacList(vector)
+        Self(vector)
     }
 }
 
@@ -247,6 +250,6 @@ impl<'a> From<AlpmList<'a, &'a Dep>> for PacList<DepInfo<'a>> {
             .into_iter()
             .map(|dep| DepInfo::from(dep))
             .collect();
-        PacList(vector)
+        Self(vector)
     }
 }
