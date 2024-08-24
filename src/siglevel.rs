@@ -49,8 +49,8 @@ where
 ///
 /// This is a re-implementation of the following pacman functions:
 ///
-/// - `process_siglevel`: https://gitlab.archlinux.org/pacman/pacman/-/blob/master/src/pacman/conf.c
-/// - `show_siglevel`: https://gitlab.archlinux.org/pacman/pacman/-/blob/master/src/pacman/pacman-conf.c
+/// - `process_siglevel`: <https://gitlab.archlinux.org/pacman/pacman/-/blob/master/src/pacman/conf.c>
+/// - `show_siglevel`: <https://gitlab.archlinux.org/pacman/pacman/-/blob/master/src/pacman/pacman-conf.c>
 ///
 /// ### Examples:
 ///

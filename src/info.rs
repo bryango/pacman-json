@@ -1,4 +1,4 @@
-//! This module defines the [`PackageInfo`] struct for serializing package
+//! A module that defines the [`PackageInfo`] struct for serializing package
 //! information, including functions to encode and decode relevant data.
 
 use alpm::{decode_signature, Alpm, AlpmList, Dep, IntoAlpmListItem, Package};
@@ -24,11 +24,15 @@ trait DebugFormat {
 /// be inlined in release mode. Nice!
 impl<T: Debug> DebugFormat for T {}
 
-// dump_pkg_full: https://gitlab.archlinux.org/pacman/pacman/-/blob/master/src/pacman/package.c
-
-/// This is a wrapper of the relevant information of a pacman [`Package`]
+/// A wrapper of the relevant information of a pacman [`Package`]
 /// for ease of serialization by [`serde`].
+/// The reference implementation in th official `pacman` package
+/// is given by the `dump_pkg_full` function in [`package.c`].
+///
+/// [`package.c`]: https://gitlab.archlinux.org/pacman/pacman/-/blob/master/src/pacman/package.c
+///
 #[derive(Serialize, Clone, Debug)]
+#[non_exhaustive]
 pub struct PackageInfo<'h> {
     // #[allow(dead_code)]
     // #[serde(skip)]
@@ -49,16 +53,27 @@ pub struct PackageInfo<'h> {
     pub conflicts_with: PacList<DepInfo<'h>>,
     pub replaces: PacList<DepInfo<'h>>,
 
-    /// [`PackageInfo::required_by`] and similarly, `optional_for`
-    /// and `required_by_{make,check}` are reverse dependencies; they are
+    /// Note that [`required_by`] and similarly, [`optional_for`]
+    /// and <code>required_by_{[make],[check]}</code>
+    /// are reverse dependencies; they are
     /// computed on demand with the [`add_reverse_deps`] function.
+    ///
+    /// [`required_by`]: PackageInfo::required_by
+    /// [`optional_for`]: PackageInfo::optional_for
+    /// [make]: PackageInfo::required_by_make
+    /// [check]: PackageInfo::required_by_check
+    ///
     pub required_by: &'h BTreeSet<String>,
     pub optional_for: &'h BTreeSet<String>,
     pub required_by_make: &'h BTreeSet<String>,
     pub required_by_check: &'h BTreeSet<String>,
 
-    /// `download_size` and `compressed_size` are the same;
-    /// both are `alpm_pkg_get_size` so we implement only one of them.
+    /// Note that [`download_size`] and `compressed_size` are
+    /// essentially the same; both are `alpm_pkg_get_size` so we implement
+    /// only one of them.
+    ///
+    /// [`download_size`]: PackageInfo::download_size
+    ///
     pub download_size: i64,
     pub installed_size: i64,
     pub packager: Option<&'h str>,
@@ -70,7 +85,8 @@ pub struct PackageInfo<'h> {
     pub sha_256_sum: Option<&'h str>,
     pub signatures: Option<&'h str>,
 
-    /// `key_id` is set to None when initialized; it can be decoded on-demand
+    /// Note that [`key_id`][PackageInfo::key_id] is set to None
+    /// when initialized; it can be decoded on-demand
     /// with the [`Alpm`] handle with the [`decode_keyid`] function.
     pub key_id: Option<Vec<Box<str>>>,
     pub validated_by: Box<str>,
@@ -123,6 +139,8 @@ impl<'h> From<&'h Package> for PackageInfo<'h> {
     }
 }
 
+/// A wrapper of the information of a pacman dependency [`Dep`]
+/// for ease of serialization by [`serde`].
 #[derive(Serialize, Clone, Debug)]
 pub struct DepInfo<'h> {
     pub dep_string: String,
@@ -171,7 +189,7 @@ pub fn decode_keyid<'h>(handle: &'h Alpm, pkg_info: PackageInfo<'h>) -> PackageI
     }
 }
 
-/// Adds sync database info to the local package
+/// Adds sync database info to a local package
 pub fn add_sync_info<'h>(
     local_info: PackageInfo<'h>,
     sync_info: PackageInfo<'h>,
@@ -182,7 +200,7 @@ pub fn add_sync_info<'h>(
     }
 }
 
-/// Adds local database info to the sync package
+/// Adds local database info to a sync package
 pub fn add_local_info<'h>(
     local_info: PackageInfo<'h>,
     sync_info: PackageInfo<'h>,
@@ -197,16 +215,13 @@ pub fn add_local_info<'h>(
     }
 }
 
-/// Adds reverse dependencies info
+/// Adds reverse dependencies information to a package
 pub fn add_reverse_deps<'h>(
     pkg_info: PackageInfo<'h>,
     reverse_deps: &'h ReverseDependencyMaps,
 ) -> PackageInfo<'h> {
-    let get = |rev_deps_map: &'h RevDepsMap| {
-        rev_deps_map
-            .get(pkg_info.name)
-            .unwrap_or(&EMPTY_REV_DEPS)
-    };
+    let get =
+        |rev_deps_map: &'h RevDepsMap| rev_deps_map.get(pkg_info.name).unwrap_or(&EMPTY_REV_DEPS);
     PackageInfo {
         required_by: get(&reverse_deps.required_by),
         optional_for: get(&reverse_deps.optional_for),
@@ -220,7 +235,7 @@ pub fn add_reverse_deps<'h>(
 /// returned from alpm. Conversions from [`AlpmList`] are implemented.
 ///
 /// `impl Serialize for AlpmList` does not work due to rust "orphan rules";
-/// see e.g. https://github.com/Ixrec/rust-orphan-rules.
+/// see e.g. <https://github.com/Ixrec/rust-orphan-rules>.
 #[derive(Serialize, Clone, Debug, derive_more::Deref, derive_more::From)]
 pub struct PacList<T>(Vec<T>);
 

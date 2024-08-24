@@ -8,7 +8,7 @@ use clap::Parser;
 use info::{add_local_info, add_reverse_deps, add_sync_info, decode_keyid, PackageInfo};
 use reverse_deps::ReverseDependencyMaps;
 
-/// This struct contains the available filters for pacman packages, exposed
+/// Available filters for pacman packages, exposed
 /// through the command line interface.
 #[derive(Debug, Parser)]
 #[command(about)]
