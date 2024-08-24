@@ -15,7 +15,7 @@
 //! See e.g. `alpm_sys::ffi::alpm_pkg_compute_requiredby()`.
 
 use alpm::{Alpm, AlpmList, Dep, Package};
-use std::collections::{HashMap, BTreeSet};
+use std::collections::{BTreeSet, HashMap};
 
 /// A map of reverse dependencies, from a package's name to the names of
 /// packages that are dependent on it.

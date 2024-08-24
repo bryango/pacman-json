@@ -189,29 +189,27 @@ pub fn decode_keyid<'h>(handle: &'h Alpm, pkg_info: PackageInfo<'h>) -> PackageI
     }
 }
 
-/// Adds sync database info to a local package
-pub fn add_sync_info<'h>(
-    local_info: PackageInfo<'h>,
-    sync_info: PackageInfo<'h>,
-) -> PackageInfo<'h> {
-    PackageInfo {
-        sync_with: Some(Box::new(sync_info)),
-        ..local_info
+impl<'h> PackageInfo<'h> {
+    /// Adds sync database info to a local package
+    pub fn add_sync_info(self, sync_info: PackageInfo<'h>) -> PackageInfo<'h> {
+        let local_info = self;
+        PackageInfo {
+            sync_with: Some(Box::new(sync_info)),
+            ..local_info
+        }
     }
-}
 
-/// Adds local database info to a sync package
-pub fn add_local_info<'h>(
-    local_info: PackageInfo<'h>,
-    sync_info: PackageInfo<'h>,
-) -> PackageInfo<'h> {
-    let reason = local_info.install_reason.clone(); // otherwise partial move
-    PackageInfo {
-        install_date: local_info.install_date,
-        install_reason: reason,
-        install_script: local_info.install_script,
-        sync_with: Some(Box::new(local_info)),
-        ..sync_info
+    /// Adds local database info to a sync package
+    pub fn add_local_info(self, local_info: PackageInfo<'h>) -> PackageInfo<'h> {
+        let sync_info = self;
+        let reason = local_info.install_reason.clone(); // otherwise partial move
+        PackageInfo {
+            install_date: local_info.install_date,
+            install_reason: reason,
+            install_script: local_info.install_script,
+            sync_with: Some(Box::new(local_info)),
+            ..sync_info
+        }
     }
 }
 
