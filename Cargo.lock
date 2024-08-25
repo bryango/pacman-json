@@ -325,6 +325,7 @@ name = "pacjump"
 version = "0.3.2"
 dependencies = [
  "alpm",
+ "alpm-sys",
  "anyhow",
  "backtrace-on-stack-overflow",
  "clap",
