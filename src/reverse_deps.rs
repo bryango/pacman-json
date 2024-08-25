@@ -40,8 +40,12 @@ impl Default for &ReverseDeps {
 /// packages that are dependent on it.
 pub type ReverseDepsMap = HashMap<String, ReverseDeps>;
 
-/// Retrieves a HashMap of all reverse dependencies. This function is ported
-/// from: <https://github.com/jelly/pacquery>.
+/// Generates a [HashMap] of all reverse dependencies from the sync database
+/// [`Alpm::syncdbs`]. The type of dependencies are specified by the
+/// `get_dependencies` argument. See [`ReverseDepsDatabase`] for its usage.
+///
+/// This function is ported from: <https://github.com/jelly/pacquery>.
+///
 pub fn get_reverse_deps_map(
     handle: &Alpm,
     get_dependencies: fn(&Package) -> AlpmList<&Dep>,
@@ -79,7 +83,7 @@ pub struct ReverseDepsDatabase {
 
 impl From<&Alpm> for ReverseDepsDatabase {
     /// Generates the full complete reverse dependencies maps from the [`Alpm`]
-    /// database handle. This is only constructed once after the database is
+    /// database handle. This is only constructed once, after the database is
     /// fully initialized.
     fn from(handle: &Alpm) -> Self {
         let get = |f| get_reverse_deps_map(&handle, f);
