@@ -62,6 +62,7 @@ pub struct PackageInfo<'h> {
     /// [`optional_for`]: PackageInfo::optional_for
     /// [make]: PackageInfo::required_by_make
     /// [check]: PackageInfo::required_by_check
+    /// [`add_reverse_deps`]: PackageInfo::add_reverse_deps
     ///
     pub required_by: &'h BTreeSet<String>,
     pub optional_for: &'h BTreeSet<String>,
@@ -87,7 +88,9 @@ pub struct PackageInfo<'h> {
 
     /// Note that [`key_id`][PackageInfo::key_id] is set to None
     /// when initialized; it can be decoded on-demand
-    /// with the [`Alpm`] handle with the [`decode_keyid`] function.
+    /// with the [`Alpm`] handle using the
+    /// [`decode_keyid`][PackageInfo::decode_keyid] method.
+    ///
     pub key_id: Option<Vec<Box<str>>>,
     pub validated_by: Box<str>,
     pub sync_with: Option<Box<Self>>,
