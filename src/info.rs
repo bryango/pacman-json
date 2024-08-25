@@ -237,7 +237,7 @@ impl<'h> PackageInfo<'h> {
 /// does not work due to rust "orphan rules";
 /// see e.g. <https://github.com/Ixrec/rust-orphan-rules>.
 ///
-#[derive(Serialize, Clone, Debug, derive_more::Deref, derive_more::From)]
+#[derive(Serialize, Clone, Debug, derive_more::IntoIterator, derive_more::From)]
 pub struct PacList<T>(Vec<T>);
 
 impl<'a, T: IntoAlpmListItem> From<AlpmList<'a, T>> for PacList<T> {

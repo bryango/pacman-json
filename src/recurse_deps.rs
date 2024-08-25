@@ -31,7 +31,7 @@ where
     let db_list = mut_list.list();
     let mut satisfied_dependencies = |dependencies: PacList<DepInfo<'h>>| -> Vec<DepInfo<'h>> {
         dependencies
-            .iter()
+            .into_iter()
             .map(|dep| {
                 let pkg = match db_list.clone().find_satisfier(dep.dep_string.clone()) {
                     Some(pkg) => pkg,
