@@ -18,17 +18,35 @@
 use alpm::{Alpm, AlpmList, Dep, Package};
 use std::collections::{BTreeSet, HashMap};
 
+/// A wrapper of [`BTreeSet`] for reverse dependencies.
+#[derive(Debug, derive_more::Deref, derive_more::DerefMut, serde::Serialize)]
+pub struct ReverseDeps(BTreeSet<String>);
+impl ReverseDeps {
+    /// A constant reference to an empty set of reverse dependencies.
+    pub const NONE: &'static Self = &Self::new();
+
+    /// Makes a new, empty set of reverse dependencies.
+    pub const fn new() -> Self {
+        ReverseDeps(BTreeSet::new())
+    }
+}
+impl Default for &ReverseDeps {
+    fn default() -> Self {
+        ReverseDeps::NONE
+    }
+}
+
 /// A map of reverse dependencies, from a package's name to the names of
 /// packages that are dependent on it.
-pub type RevDepsMap = HashMap<String, BTreeSet<String>>;
+pub type ReverseDepsMap = HashMap<String, ReverseDeps>;
 
 /// Retrieves a HashMap of all reverse dependencies. This function is ported
 /// from: <https://github.com/jelly/pacquery>.
 pub fn get_reverse_deps_map(
     handle: &Alpm,
     get_dependencies: fn(&Package) -> AlpmList<&Dep>,
-) -> RevDepsMap {
-    let mut reverse_deps: RevDepsMap = HashMap::new();
+) -> ReverseDepsMap {
+    let mut reverse_deps: ReverseDepsMap = HashMap::new();
     let dbs = handle.syncdbs();
 
     for db in dbs {
@@ -40,7 +58,7 @@ pub fn get_reverse_deps_map(
                         e.insert(pkg.name().to_string());
                     })
                     .or_insert_with(|| {
-                        let mut modify = BTreeSet::new();
+                        let mut modify = ReverseDeps::new();
                         modify.insert(pkg.name().to_string());
                         modify
                     });
@@ -52,14 +70,14 @@ pub fn get_reverse_deps_map(
 }
 
 /// A collection of all different kinds of reverse dependencies maps.
-pub struct ReverseDependencyMaps {
-    pub optional_for: RevDepsMap,
-    pub required_by: RevDepsMap,
-    pub required_by_make: RevDepsMap,
-    pub required_by_check: RevDepsMap,
+pub struct ReverseDepsDatabase {
+    pub optional_for: ReverseDepsMap,
+    pub required_by: ReverseDepsMap,
+    pub required_by_make: ReverseDepsMap,
+    pub required_by_check: ReverseDepsMap,
 }
 
-impl From<&Alpm> for ReverseDependencyMaps {
+impl From<&Alpm> for ReverseDepsDatabase {
     /// Generates the full complete reverse dependencies maps from the [`Alpm`]
     /// database handle. This is only constructed once after the database is
     /// fully initialized.

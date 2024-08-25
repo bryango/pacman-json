@@ -1,6 +1,6 @@
 use pacjump::info::PackageInfo;
 use pacjump::recurse_deps::recurse_dependencies;
-use pacjump::reverse_deps::ReverseDependencyMaps;
+use pacjump::reverse_deps::ReverseDepsDatabase;
 use pacjump::siglevel::{default_siglevel, read_conf, repo_siglevel};
 use pacjump::{find_in_databases, generate_pkg_info, PackageFilters};
 
@@ -41,7 +41,7 @@ fn main() -> anyhow::Result<()> {
     eprintln!("");
 
     eprintln!("# generating reverse dependencies ...");
-    let reverse_deps = ReverseDependencyMaps::from(&handle);
+    let reverse_deps = ReverseDepsDatabase::from(&handle);
     eprintln!(
         "# done. Required-by pkgs: {}",
         reverse_deps.required_by.len()

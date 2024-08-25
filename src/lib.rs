@@ -6,7 +6,7 @@ pub mod siglevel;
 use alpm::{Alpm, Db, Package, PackageReason};
 use clap::Parser;
 use info::PackageInfo;
-use reverse_deps::ReverseDependencyMaps;
+use reverse_deps::ReverseDepsDatabase;
 
 /// Available filters for pacman packages, exposed
 /// through the command line interface.
@@ -49,7 +49,7 @@ pub fn generate_pkg_info<'a>(
     handle: &'a Alpm,
     pkg: &'a Package,
     pkg_filters: &PackageFilters,
-    reverse_deps: &'a ReverseDependencyMaps,
+    reverse_deps: &'a ReverseDepsDatabase,
 ) -> anyhow::Result<PackageInfo<'a>> {
     // only focus on explicitly installed packages
     if pkg_filters.recurse.is_none() && !pkg_filters.all && pkg.reason() != PackageReason::Explicit

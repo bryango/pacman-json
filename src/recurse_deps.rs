@@ -2,7 +2,7 @@ use alpm::{Alpm, AlpmListMut, Db};
 use indexmap::IndexSet;
 
 use crate::info::{DepInfo, PacList, PackageInfo};
-use crate::reverse_deps::ReverseDependencyMaps;
+use crate::reverse_deps::ReverseDepsDatabase;
 use crate::{generate_pkg_info, PackageFilters};
 
 /// Recurses the dependency tree of a [`PackageInfo`], finds the packages
@@ -13,7 +13,7 @@ pub fn recurse_dependencies<'h, T>(
     handle: &'h Alpm,
     databases: T,
     pkg_filters: &PackageFilters,
-    reverse_deps: &'h ReverseDependencyMaps,
+    reverse_deps: &'h ReverseDepsDatabase,
     pkg_info: PackageInfo<'h>,
     depth: u64,
     deps_set: &mut IndexSet<String>,

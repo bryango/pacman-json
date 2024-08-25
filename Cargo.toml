@@ -24,7 +24,7 @@ anyhow = "1.0.80"
 backtrace-on-stack-overflow = { version = "0.3.0", optional = true }
 clap = { version = "4.5.2", features = ["derive"] }
 clap_complete = "4.5.1"
-derive_more = { version = "1.0.0", features = ["from", "into_iterator"] }
+derive_more = { version = "1.0.0", features = ["deref", "deref_mut", "from", "into_iterator"] }
 indexmap = "2.3.0"
 serde = { version = "1.0.180", features = ["derive"] }
 serde_json = "1.0.104"

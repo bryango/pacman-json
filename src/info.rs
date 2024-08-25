@@ -3,11 +3,9 @@
 
 use alpm::{decode_signature, Alpm, AlpmList, Dep, IntoAlpmListItem, Package};
 use serde::Serialize;
-use std::{collections::BTreeSet, fmt::Debug};
+use std::fmt::Debug;
 
-use crate::reverse_deps::{RevDepsMap, ReverseDependencyMaps};
-
-static EMPTY_REV_DEPS: BTreeSet<String> = BTreeSet::new();
+use crate::reverse_deps::{ReverseDeps, ReverseDepsDatabase, ReverseDepsMap};
 
 trait DebugFormat {
     /// Formats an object to [`Box<str>`] with its [`Debug`] info
@@ -64,10 +62,10 @@ pub struct PackageInfo<'h> {
     /// [check]: PackageInfo::required_by_check
     /// [`add_reverse_deps`]: PackageInfo::add_reverse_deps
     ///
-    pub required_by: &'h BTreeSet<String>,
-    pub optional_for: &'h BTreeSet<String>,
-    pub required_by_make: &'h BTreeSet<String>,
-    pub required_by_check: &'h BTreeSet<String>,
+    pub required_by: &'h ReverseDeps,
+    pub optional_for: &'h ReverseDeps,
+    pub required_by_make: &'h ReverseDeps,
+    pub required_by_check: &'h ReverseDeps,
 
     /// Note that [`download_size`] and `compressed_size` are
     /// essentially the same; both are `alpm_pkg_get_size` so we implement
@@ -119,10 +117,10 @@ impl<'h> From<&'h Package> for PackageInfo<'h> {
             optional_deps: pkg.optdepends().into(),
             makedepends: pkg.makedepends().into(),
             checkdepends: pkg.checkdepends().into(),
-            required_by: &EMPTY_REV_DEPS,
-            optional_for: &EMPTY_REV_DEPS,
-            required_by_make: &EMPTY_REV_DEPS,
-            required_by_check: &EMPTY_REV_DEPS,
+            required_by: ReverseDeps::NONE,
+            optional_for: ReverseDeps::NONE,
+            required_by_make: ReverseDeps::NONE,
+            required_by_check: ReverseDeps::NONE,
             conflicts_with: pkg.conflicts().into(),
             replaces: pkg.replaces().into(),
             download_size: pkg.size(),
@@ -216,9 +214,9 @@ impl<'h> PackageInfo<'h> {
     }
 
     /// Adds reverse dependencies information to a package
-    pub fn add_reverse_deps(self, reverse_deps: &'h ReverseDependencyMaps) -> Self {
+    pub fn add_reverse_deps(self, reverse_deps: &'h ReverseDepsDatabase) -> Self {
         let get =
-            |rev_deps_map: &'h RevDepsMap| rev_deps_map.get(self.name).unwrap_or(&EMPTY_REV_DEPS);
+            |rev_deps_map: &'h ReverseDepsMap| rev_deps_map.get(self.name).unwrap_or_default();
         PackageInfo {
             required_by: get(&reverse_deps.required_by),
             optional_for: get(&reverse_deps.optional_for),
