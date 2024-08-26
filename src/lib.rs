@@ -30,15 +30,15 @@ pub struct PackageFilters {
     pub plain: bool,
 
     /// Recursively query the dependencies of the given package;
-    /// implies '--all'
+    /// implies `--all`
     #[arg(long)]
     pub recurse: Option<String>,
 
-    /// '--recurse' installed optional dependencies as well
+    /// `--recurse` installed optional dependencies as well
     #[arg(long, requires = "recurse")]
     pub optional: bool,
 
-    /// '--recurse' dependencies, but only prints package names and versions
+    /// `--recurse` dependencies, but only prints package names and versions
     #[arg(long, requires = "recurse")]
     pub summary: bool,
 }
