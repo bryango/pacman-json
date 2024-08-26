@@ -95,7 +95,7 @@ pub struct PackageInfo<'h> {
 }
 
 impl<'h> From<&'h Package> for PackageInfo<'h> {
-    /// Converts an alpm [`Package`] to a [`PackageInfo`] containing the
+    /// Converts an [`alpm::Package`] to a [`PackageInfo`] containing the
     /// relevant information, to be serialized.
     fn from(pkg: &'h Package) -> Self {
         let db = pkg.db().map(|db| db.name());
@@ -168,25 +168,28 @@ impl<'h> From<&'h Dep> for DepInfo<'h> {
 }
 
 impl<'h> PackageInfo<'h> {
-    /// Decodes the signature with an [`Alpm`] handle and extracts the key ID
+    /// Tries to decode the signature of an [`Alpm::syncdbs`] package with an [`Alpm`]
+    /// handle and return the key ID.
+    fn get_keyid(&self, handle: &'h Alpm) -> anyhow::Result<Vec<Box<str>>> {
+        let decoded = match self.signatures {
+            None => anyhow::bail!("signatures not found for {self:?}"),
+            Some(sig) => decode_signature(sig)?,
+        };
+        let res = handle
+            .extract_keyid(self.name, &decoded)?
+            .into_iter()
+            .map(|x| x.into_boxed_str())
+            .collect::<Vec<_>>();
+        Ok(res)
+    }
+
+    /// Decodes the signature of an [`Alpm::syncdbs`] package with an [`Alpm`]
+    /// handle and extracts the key ID, writing possible errors into the final
+    /// [`Vec<Box<str>>`].
     pub fn decode_keyid(self, handle: &'h Alpm) -> Self {
-        let sig = match self.signatures {
-            None => return self,
-            Some(sig) => decode_signature(sig),
-        };
-        let res = match sig {
-            Err(err) => vec![err.format()],
-            Ok(decoded) => handle.extract_keyid(self.name, &decoded).map_or_else(
-                |err| vec![err.format()],
-                |keys| {
-                    keys.into_iter()
-                        .map(|x| x.into_boxed_str())
-                        .collect::<Vec<_>>()
-                },
-            ),
-        };
-        PackageInfo {
-            key_id: Some(res),
+        let key_id = self.get_keyid(handle).unwrap_or_else(|x| vec![x.format()]);
+        Self {
+            key_id: Some(key_id),
             ..self
         }
     }
