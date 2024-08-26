@@ -2,7 +2,7 @@ use pacjump::info::PackageInfo;
 use pacjump::recurse_deps::recurse_dependencies;
 use pacjump::reverse_deps::ReverseDepsDatabase;
 use pacjump::siglevel::{default_siglevel, read_conf, repo_siglevel};
-use pacjump::{find_in_databases, generate_pkg_info, PackageFilters};
+use pacjump::{find_in_databases, PackageFilters};
 
 use alpm::Alpm;
 use clap::Parser;
@@ -56,7 +56,7 @@ fn main() -> anyhow::Result<()> {
 
     let all_packages: Vec<PackageInfo<'_>> = if let Some(name) = pkg_filters.recurse.clone() {
         let pkg = find_in_databases(db_list.clone(), name.clone())?;
-        let pkg_info = generate_pkg_info(&handle, pkg, &pkg_filters, &reverse_deps)?;
+        let pkg_info = pkg_filters.generate_pkg_info(&handle, pkg, &reverse_deps)?;
         let mut deps_set = IndexSet::new();
         let mut deps_pkgs = Vec::new();
         let _ = recurse_dependencies(
@@ -93,7 +93,9 @@ fn main() -> anyhow::Result<()> {
                 db.pkgs()
                     .iter()
                     .filter_map(|pkg| {
-                        generate_pkg_info(&handle, pkg, &pkg_filters, &reverse_deps).ok()
+                        pkg_filters
+                            .generate_pkg_info(&handle, pkg, &reverse_deps)
+                            .ok()
                     })
                     .collect::<Vec<_>>()
             })

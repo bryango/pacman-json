@@ -3,7 +3,7 @@ use indexmap::IndexSet;
 
 use crate::info::{DepInfo, PacList, PackageInfo};
 use crate::reverse_deps::ReverseDepsDatabase;
-use crate::{generate_pkg_info, PackageFilters};
+use crate::PackageFilters;
 
 /// Recurses the dependency tree of a [`PackageInfo`], finds the packages
 /// satisfying the dependency requirements, collects the satisfiers' data
@@ -40,8 +40,9 @@ where
                 let satisfier = format!("{}={}", pkg.name(), pkg.version());
                 let next_depth = depth + 1;
                 if !deps_set.contains(&satisfier) {
-                    let pkg_info = generate_pkg_info(handle, pkg, pkg_filters, &reverse_deps)
-                        .unwrap_or(PackageInfo::from(pkg));
+                    let pkg_info = pkg_filters
+                        .generate_pkg_info(handle, pkg, &reverse_deps)
+                        .unwrap_or(pkg.into());
                     recurse_dependencies(
                         &handle,
                         databases.clone(),

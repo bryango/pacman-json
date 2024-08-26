@@ -43,70 +43,62 @@ pub struct PackageFilters {
     pub summary: bool,
 }
 
-/// Applies an instance of [`PackageFilters`] to a [`alpm::Package`], and
-/// optionally returns the desired [`info::PackageInfo`].
-pub fn generate_pkg_info<'a>(
-    handle: &'a Alpm,
-    pkg: &'a Package,
-    pkg_filters: &PackageFilters,
-    reverse_deps: &'a ReverseDepsDatabase,
-) -> anyhow::Result<PackageInfo<'a>> {
-    // only focus on explicitly installed packages
-    if pkg_filters.recurse.is_none() && !pkg_filters.all && pkg.reason() != PackageReason::Explicit
-    {
-        anyhow::bail!("{:?} not explicitly installed, skipped", pkg);
-    }
-    let pkg_info = match pkg_filters.plain {
-        true => PackageInfo::from(pkg),
-        false => enrich_pkg_info(&handle, pkg, &pkg_filters),
-    };
-    return Ok(pkg_info.add_reverse_deps(reverse_deps));
-}
-
-/// Enriches package with sync & local database information, if desired and
-/// when possible. If the sync database information is available and accurate,
-/// it will be preferred as the base info since it contains more details.
-fn enrich_pkg_info<'a>(
-    handle: &'a Alpm,
-    pkg: &'a Package,
-    pkg_filters: &PackageFilters,
-) -> PackageInfo<'a> {
-    let base_info = PackageInfo::from(pkg);
-
-    if pkg_filters.sync {
-        let sync_pkg = pkg;
-        let sync_info = base_info.decode_keyid(&handle);
-        if pkg_filters.plain {
-            return sync_info;
+impl PackageFilters {
+    /// Applies an instance of [`PackageFilters`] to an [`alpm::Package`], and
+    /// returns either the desired [`info::PackageInfo`] or an error.
+    pub fn generate_pkg_info<'a>(
+        &self,
+        handle: &'a Alpm,
+        pkg: &'a Package,
+        reverse_deps: &'a ReverseDepsDatabase,
+    ) -> anyhow::Result<PackageInfo<'a>> {
+        // only focus on explicitly installed packages
+        if self.recurse.is_none() && !self.all && pkg.reason() != PackageReason::Explicit {
+            anyhow::bail!("{:?} not explicitly installed, skipped", pkg);
         }
-        match handle.localdb().pkg(sync_pkg.name()) {
-            Err(_) => return sync_info,
-            Ok(local_pkg) => {
-                let local_info = PackageInfo::from(local_pkg);
-                return sync_info.add_local_info(local_info);
+        let mut pkg_info = match self.sync {
+            true => PackageInfo::from_sync_pkg(handle, pkg),
+            false => PackageInfo::from(pkg),
+        };
+        if !self.plain {
+            pkg_info = self.enrich_pkg_info(handle, pkg_info)
+        }
+        return Ok(pkg_info.add_reverse_deps(reverse_deps));
+    }
+
+    /// Enriches package with sync & local database information, if desired and
+    /// when possible. If the sync database information is available and accurate,
+    /// it will be preferred as the base info since it contains more details.
+    fn enrich_pkg_info<'a>(&self, handle: &'a Alpm, pkg_info: PackageInfo<'a>) -> PackageInfo<'a> {
+        if self.sync {
+            let sync_info = pkg_info;
+            match handle.localdb().pkg(sync_info.name) {
+                Err(_) => return sync_info,
+                Ok(local_pkg) => {
+                    let local_info = PackageInfo::from(local_pkg);
+                    return sync_info.add_local_info(local_info);
+                }
+            };
+        }
+        // otherwise, the input `pkg` is local:
+        let local_info = pkg_info;
+        let sync_pkg = match find_in_databases(handle.syncdbs(), local_info.name.to_string()) {
+            Err(msg) => {
+                eprintln!("{}", msg);
+                return local_info;
             }
+            Ok(x) => x,
+        };
+        let sync_info = PackageInfo::from_sync_pkg(handle, sync_pkg);
+
+        return match self.plain
+            || local_info.packager != sync_pkg.packager()
+            || local_info.version != sync_pkg.version()
+        {
+            true => local_info.add_sync_info(sync_info),
+            false => sync_info.add_local_info(local_info),
         };
     }
-
-    // otherwise, the input `pkg` is local:
-    let local_pkg = pkg;
-    let local_info = base_info;
-    let sync_pkg = match find_in_databases(handle.syncdbs(), local_pkg.name().to_string()) {
-        Err(msg) => {
-            eprintln!("{}", msg);
-            return local_info;
-        }
-        Ok(x) => x,
-    };
-    let sync_info = PackageInfo::from(sync_pkg).decode_keyid(&handle);
-
-    return match pkg_filters.plain
-        || local_pkg.packager() != sync_pkg.packager()
-        || local_pkg.version() != sync_pkg.version()
-    {
-        true => local_info.add_sync_info(sync_info),
-        false => sync_info.add_local_info(local_info),
-    };
 }
 
 /// Locates a Package from some databases by its name.

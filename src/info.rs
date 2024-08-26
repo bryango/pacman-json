@@ -140,6 +140,14 @@ impl<'h> From<&'h Package> for PackageInfo<'h> {
     }
 }
 
+impl<'a> PackageInfo<'a> {
+    /// Generates [`PackageInfo`] from an [`Alpm::syncdbs`] package,
+    /// decoding the associated signature key ID in the process.
+    pub fn from_sync_pkg(handle: &'a Alpm, pkg: &'a Package) -> Self {
+        Self::from(pkg).decode_keyid(handle)
+    }
+}
+
 /// A wrapper of the information of a pacman dependency [`Dep`]
 /// for ease of serialization by [`serde`].
 #[derive(Serialize, Clone, Debug)]
