@@ -31,25 +31,25 @@ impl<T: Debug> DebugFormat for T {}
 ///
 #[derive(Serialize, Clone, Debug)]
 #[non_exhaustive]
-pub struct PackageInfo<'h> {
+pub struct PackageInfo<'a> {
     // #[allow(dead_code)]
     // #[serde(skip)]
-    // package: Package<'h>,
-    pub repository: Option<&'h str>,
-    pub name: &'h str,
-    pub version: &'h str,
-    pub description: Option<&'h str>,
-    pub architecture: Option<&'h str>,
-    pub url: Option<&'h str>,
-    pub licenses: PacList<&'h str>,
-    pub groups: PacList<&'h str>,
-    pub provides: PacList<DepInfo<'h>>,
-    pub depends_on: PacList<DepInfo<'h>>,
-    pub optional_deps: PacList<DepInfo<'h>>,
-    pub makedepends: PacList<DepInfo<'h>>,
-    pub checkdepends: PacList<DepInfo<'h>>,
-    pub conflicts_with: PacList<DepInfo<'h>>,
-    pub replaces: PacList<DepInfo<'h>>,
+    // package: Package<'a>,
+    pub repository: Option<&'a str>,
+    pub name: &'a str,
+    pub version: &'a str,
+    pub description: Option<&'a str>,
+    pub architecture: Option<&'a str>,
+    pub url: Option<&'a str>,
+    pub licenses: PacList<&'a str>,
+    pub groups: PacList<&'a str>,
+    pub provides: PacList<DepInfo<'a>>,
+    pub depends_on: PacList<DepInfo<'a>>,
+    pub optional_deps: PacList<DepInfo<'a>>,
+    pub makedepends: PacList<DepInfo<'a>>,
+    pub checkdepends: PacList<DepInfo<'a>>,
+    pub conflicts_with: PacList<DepInfo<'a>>,
+    pub replaces: PacList<DepInfo<'a>>,
 
     /// Note that [`required_by`] and similarly, [`optional_for`]
     /// and <code>required_by_{[make],[check]}</code>
@@ -62,10 +62,10 @@ pub struct PackageInfo<'h> {
     /// [check]: PackageInfo::required_by_check
     /// [`add_reverse_deps`]: PackageInfo::add_reverse_deps
     ///
-    pub required_by: &'h ReverseDeps,
-    pub optional_for: &'h ReverseDeps,
-    pub required_by_make: &'h ReverseDeps,
-    pub required_by_check: &'h ReverseDeps,
+    pub required_by: &'a ReverseDeps,
+    pub optional_for: &'a ReverseDeps,
+    pub required_by_make: &'a ReverseDeps,
+    pub required_by_check: &'a ReverseDeps,
 
     /// Note that [`download_size`] and `compressed_size` are
     /// essentially the same; both are `alpm_pkg_get_size` so we implement
@@ -75,14 +75,14 @@ pub struct PackageInfo<'h> {
     ///
     pub download_size: i64,
     pub installed_size: i64,
-    pub packager: Option<&'h str>,
+    pub packager: Option<&'a str>,
     pub build_date: i64,
     pub install_date: Option<i64>,
     pub install_reason: Box<str>,
     pub install_script: bool,
-    pub md5_sum: Option<&'h str>,
-    pub sha_256_sum: Option<&'h str>,
-    pub signatures: Option<&'h str>,
+    pub md5_sum: Option<&'a str>,
+    pub sha_256_sum: Option<&'a str>,
+    pub signatures: Option<&'a str>,
 
     /// Note that [`key_id`][PackageInfo::key_id] is set to None
     /// when initialized; it can be decoded on-demand
@@ -94,10 +94,10 @@ pub struct PackageInfo<'h> {
     pub sync_with: Option<Box<Self>>,
 }
 
-impl<'h> From<&'h Package> for PackageInfo<'h> {
+impl<'a> From<&'a Package> for PackageInfo<'a> {
     /// Converts an [`alpm::Package`] to a [`PackageInfo`] containing the
     /// relevant information, to be serialized.
-    fn from(pkg: &'h Package) -> Self {
+    fn from(pkg: &'a Package) -> Self {
         let db = pkg.db().map(|db| db.name());
         let name = pkg.name();
         // eprintln!("{:?}: {}", db, name);
@@ -151,18 +151,18 @@ impl<'a> PackageInfo<'a> {
 /// A wrapper of the information of a pacman dependency [`Dep`]
 /// for ease of serialization by [`serde`].
 #[derive(Serialize, Clone, Debug)]
-pub struct DepInfo<'h> {
+pub struct DepInfo<'a> {
     pub dep_string: String,
-    pub name: &'h str,
+    pub name: &'a str,
     pub depmod: Box<str>,
-    pub version: Option<&'h str>,
-    pub description: Option<&'h str>,
+    pub version: Option<&'a str>,
+    pub description: Option<&'a str>,
     pub name_hash: u64,
     pub satisfier: Option<String>,
 }
 
-impl<'h> From<&'h Dep> for DepInfo<'h> {
-    fn from(dep: &'h Dep) -> Self {
+impl<'a> From<&'a Dep> for DepInfo<'a> {
+    fn from(dep: &'a Dep) -> Self {
         Self {
             dep_string: dep.to_string(),
             name: dep.name(),
@@ -175,10 +175,10 @@ impl<'h> From<&'h Dep> for DepInfo<'h> {
     }
 }
 
-impl<'h> PackageInfo<'h> {
+impl<'a> PackageInfo<'a> {
     /// Tries to decode the signature of an [`Alpm::syncdbs`] package with an [`Alpm`]
     /// handle and return the key ID.
-    fn get_keyid(&self, handle: &'h Alpm) -> anyhow::Result<Vec<Box<str>>> {
+    fn get_keyid(&self, handle: &'a Alpm) -> anyhow::Result<Vec<Box<str>>> {
         let decoded = match self.signatures {
             None => anyhow::bail!("signatures not found for {self:?}"),
             Some(sig) => decode_signature(sig)?,
@@ -194,7 +194,7 @@ impl<'h> PackageInfo<'h> {
     /// Decodes the signature of an [`Alpm::syncdbs`] package with an [`Alpm`]
     /// handle and extracts the key ID, writing possible errors into the final
     /// [`Vec<Box<str>>`].
-    pub fn decode_keyid(self, handle: &'h Alpm) -> Self {
+    pub fn decode_keyid(self, handle: &'a Alpm) -> Self {
         let key_id = self.get_keyid(handle).unwrap_or_else(|x| vec![x.format()]);
         Self {
             key_id: Some(key_id),
@@ -225,9 +225,9 @@ impl<'h> PackageInfo<'h> {
     }
 
     /// Adds reverse dependencies information to a package
-    pub fn add_reverse_deps(self, reverse_deps: &'h ReverseDepsDatabase) -> Self {
+    pub fn add_reverse_deps(self, reverse_deps: &'a ReverseDepsDatabase) -> Self {
         let get =
-            |rev_deps_map: &'h ReverseDepsMap| rev_deps_map.get(self.name).unwrap_or_default();
+            |rev_deps_map: &'a ReverseDepsMap| rev_deps_map.get(self.name).unwrap_or_default();
         PackageInfo {
             required_by: get(&reverse_deps.required_by),
             optional_for: get(&reverse_deps.optional_for),

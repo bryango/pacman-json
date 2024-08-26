@@ -9,18 +9,18 @@ use crate::PackageFilters;
 /// satisfying the dependency requirements, collects the satisfiers' data
 /// into a mutable [`IndexSet`], and adds the satisfiers' [`PackageInfo`]s
 /// into a mutable [`Vec`].
-pub fn recurse_dependencies<'h, T>(
-    handle: &'h Alpm,
+pub fn recurse_dependencies<'a, T>(
+    handle: &'a Alpm,
     databases: T,
     pkg_filters: &PackageFilters,
-    reverse_deps: &'h ReverseDepsDatabase,
-    pkg_info: PackageInfo<'h>,
+    reverse_deps: &'a ReverseDepsDatabase,
+    pkg_info: PackageInfo<'a>,
     depth: u64,
     deps_set: &mut IndexSet<String>,
-    deps_pkgs: &mut Vec<PackageInfo<'h>>,
+    deps_pkgs: &mut Vec<PackageInfo<'a>>,
 ) -> ()
 where
-    T: IntoIterator<Item = &'h Db> + Clone,
+    T: IntoIterator<Item = &'a Db> + Clone,
 {
     eprintln!(
         "# level {}: recursing into '{}': {:?}\n",
@@ -29,7 +29,7 @@ where
     deps_set.insert(format!("{}={}", pkg_info.name, pkg_info.version));
     let mut_list = AlpmListMut::from_iter(databases.clone().into_iter());
     let db_list = mut_list.list();
-    let mut satisfied_dependencies = |dependencies: PacList<DepInfo<'h>>| -> Vec<DepInfo<'h>> {
+    let mut satisfied_dependencies = |dependencies: PacList<DepInfo<'a>>| -> Vec<DepInfo<'a>> {
         dependencies
             .into_iter()
             .map(|dep| {
