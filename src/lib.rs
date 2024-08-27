@@ -66,37 +66,40 @@ impl PackageFilters {
         return Ok(pkg_info.add_reverse_deps(reverse_deps));
     }
 
-    /// Enriches package with sync & local database information, if desired and
-    /// when possible. If the sync database information is available and accurate,
-    /// it will be preferred as the base info since it contains more details.
+    /// Enriches package with sync & local database information, if desired
+    /// and when possible. If the sync database information is available and
+    /// matching, it will be preferred as the base info since it contains
+    /// more useful details.
     fn enrich_pkg_info<'a>(&self, handle: &'a Alpm, pkg_info: PackageInfo<'a>) -> PackageInfo<'a> {
-        if self.sync {
-            let sync_info = pkg_info;
-            match handle.localdb().pkg(sync_info.name) {
-                Err(_) => return sync_info,
-                Ok(local_pkg) => {
-                    let local_info = PackageInfo::from(local_pkg);
-                    return sync_info.add_local_info(local_info);
+        let complementary_databases: Vec<_> = match self.sync {
+            true => [handle.localdb()].into(),
+            false => handle.syncdbs().into_iter().collect(),
+        };
+        let complementary_pkg =
+            match find_in_databases(complementary_databases, pkg_info.name.to_string()) {
+                Err(msg) => {
+                    eprintln!("{msg}");
+                    return pkg_info;
                 }
+                Ok(pkg) => pkg,
             };
+        let complemetary_info = match self.sync {
+            true => PackageInfo::from(complementary_pkg),
+            false => PackageInfo::from_sync_pkg(handle, complementary_pkg),
+        };
+        if self.sync {
+            return pkg_info.add_local_info(complemetary_info);
         }
         // otherwise, the input `pkg` is local:
         let local_info = pkg_info;
-        let sync_pkg = match find_in_databases(handle.syncdbs(), local_info.name.to_string()) {
-            Err(msg) => {
-                eprintln!("{}", msg);
-                return local_info;
-            }
-            Ok(x) => x,
-        };
-        let sync_info = PackageInfo::from_sync_pkg(handle, sync_pkg);
+        let sync_info = complemetary_info;
 
-        return match self.plain
-            || local_info.packager != sync_pkg.packager()
-            || local_info.version != sync_pkg.version()
+        return match true
+            && local_info.packager == sync_info.packager
+            && local_info.version == sync_info.version
         {
-            true => local_info.add_sync_info(sync_info),
-            false => sync_info.add_local_info(local_info),
+            true => sync_info.add_local_info(local_info),
+            false => local_info.add_sync_info(sync_info),
         };
     }
 }
