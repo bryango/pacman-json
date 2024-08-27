@@ -105,22 +105,24 @@ impl PackageFilters {
 }
 
 /// Locates a Package from some databases by its name.
-pub fn find_in_databases<'a, T>(databases: T, package: String) -> anyhow::Result<&'a Package>
+pub fn find_in_databases<'a, T, S>(databases: T, package_name: S) -> anyhow::Result<&'a Package>
 where
     T: IntoIterator<Item = &'a Db>,
+    S: Into<String>,
 {
     // https://github.com/archlinux/alpm.rs/blob/master/alpm/examples/packages.rs
     // dump_pkg_search, print_installed: https://gitlab.archlinux.org/pacman/pacman/-/blob/master/src/pacman/package.c
     // display, filter, pkg_get_locality: https://gitlab.archlinux.org/pacman/pacman/-/blob/master/src/pacman/query.c
 
     // iterate through each database
+    let name: String = package_name.into();
     for db in databases {
         // look for a package by name in a database; the database is
         // implemented as a hashmap so this is faster than iterating:
-        match db.pkg(package.as_str()) {
+        match db.pkg(name.as_str()) {
             Ok(pkg) => return Ok(pkg),
             Err(_) => {}
         }
     }
-    anyhow::bail!("{:?} not found in the sync databases", &package)
+    anyhow::bail!("{:?} not found in the sync databases", &name)
 }

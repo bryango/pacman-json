@@ -48,14 +48,13 @@ fn main() -> anyhow::Result<()> {
     );
     eprintln!("");
 
-    let db_list: Vec<&alpm::Db> = if pkg_filters.sync {
-        handle.syncdbs().iter().collect()
-    } else {
-        [handle.localdb()].into()
+    let db_list: Vec<_> = match pkg_filters.sync {
+        true => handle.syncdbs().iter().collect(),
+        false => [handle.localdb()].into(),
     };
 
-    let all_packages: Vec<PackageInfo<'_>> = if let Some(name) = pkg_filters.recurse.clone() {
-        let pkg = find_in_databases(db_list.clone(), name.clone())?;
+    let all_packages: Vec<PackageInfo<'_>> = if let Some(name) = &pkg_filters.recurse {
+        let pkg = find_in_databases(db_list.clone(), name)?;
         let pkg_info = pkg_filters.generate_pkg_info(&handle, pkg, &reverse_deps)?;
         let mut deps_set = IndexSet::new();
         let mut deps_pkgs = Vec::new();
