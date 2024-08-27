@@ -104,7 +104,7 @@ impl PackageFilters {
     }
 }
 
-/// Locates a Package from some databases by its name.
+/// Locates a [`alpm::Package`] from some [`alpm::Db`] databases by its name.
 pub fn find_in_databases<'a, T, S>(databases: T, package_name: S) -> anyhow::Result<&'a Package>
 where
     T: IntoIterator<Item = &'a Db>,
@@ -127,8 +127,9 @@ where
     anyhow::bail!("{:?} not found in the sync databases", &name)
 }
 
-/// Reads pacman.conf via the cli `pacman-conf`. The arguments are directly
-/// passed into [`Command::args`] and the result is parsed into a [`String`].
+/// Reads `pacman.conf` via the cli `pacman-conf`. The arguments are directly
+/// passed into [`std::process::Command::args`] and the result is parsed into
+/// a [`String`].
 pub fn read_conf<I, S>(args: I) -> Result<String, std::io::Error>
 where
     I: IntoIterator<Item = S>,

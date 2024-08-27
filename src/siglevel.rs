@@ -1,5 +1,5 @@
-//! A module that defines various utilities to represent the [`SigLevel`] for
-//! pacman repositories.
+//! A module that defines various utilities to represent the [`alpm::SigLevel`]
+//! for pacman repositories.
 //!
 //! Note that similar functionalities are already provided in the `alpm-utils`
 //! crate. This is a minimal re-implementation of components necessary for
