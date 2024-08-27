@@ -126,3 +126,31 @@ where
     }
     anyhow::bail!("{:?} not found in the sync databases", &name)
 }
+
+/// Reads pacman.conf via the cli `pacman-conf`. The arguments are directly
+/// passed into [`Command::args`] and the result is parsed into a [`String`].
+pub fn read_conf<I, S>(args: I) -> Result<String, std::io::Error>
+where
+    I: IntoIterator<Item = S>,
+    S: AsRef<std::ffi::OsStr>,
+{
+    let cmd_out = std::process::Command::new("pacman-conf")
+        .args(args)
+        .env("LC_ALL", "C.UTF-8")
+        .env("LANGUAGE", "C.UTF-8")
+        /*
+            ^ making sure that user locales do not interfere;
+            see: https://sourceware.org/bugzilla/show_bug.cgi?id=16621
+        */
+        .output()?
+        .stdout;
+
+    let out_string = String::from_utf8_lossy(&cmd_out).to_string();
+
+    let trimmed_string = match out_string.strip_suffix('\n') {
+        Some(x) => x.to_string(),
+        None => out_string,
+    };
+
+    Ok(trimmed_string)
+}

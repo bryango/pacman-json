@@ -1,8 +1,8 @@
 use pacjump::info::PackageInfo;
 use pacjump::recurse_deps::recurse_dependencies;
 use pacjump::reverse_deps::ReverseDepsDatabase;
-use pacjump::siglevel::{default_siglevel, read_conf, repo_siglevel};
-use pacjump::{find_in_databases, PackageFilters};
+use pacjump::siglevel::{default_siglevel, repo_siglevel};
+use pacjump::{find_in_databases, read_conf, PackageFilters};
 
 use alpm::Alpm;
 use clap::Parser;
