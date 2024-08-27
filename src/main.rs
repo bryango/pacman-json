@@ -48,10 +48,10 @@ fn main() -> anyhow::Result<()> {
     );
     eprintln!("");
 
-    let db_list = if pkg_filters.sync {
+    let db_list: Vec<&alpm::Db> = if pkg_filters.sync {
         handle.syncdbs().iter().collect()
     } else {
-        vec![handle.localdb()]
+        [handle.localdb()].into()
     };
 
     let all_packages: Vec<PackageInfo<'_>> = if let Some(name) = pkg_filters.recurse.clone() {
