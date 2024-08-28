@@ -77,7 +77,7 @@ pub fn process_siglevel(default: SigLevel, siglevel: &str) -> SigLevel {
     }
 }
 
-/// Updates the [`SigLevel`] recursively, from a multiline string.
+/// Updates the `SigLevel` recursively, from a multiline string.
 ///
 /// ### Examples:
 ///
@@ -110,14 +110,15 @@ pub fn fold_siglevels(default: SigLevel, siglevels: String) -> SigLevel {
         .fold(default, process_siglevel)
 }
 
-/// Finds the default SigLevel from `pacman.conf`; if it fails, fall back to
+/// Finds the default `SigLevel` from `pacman.conf`; if it fails, fall back to
 /// the default [`SigLevel::USE_DEFAULT`].
 pub fn default_siglevel() -> SigLevel {
     let siglevels = read_conf(["SigLevel"]).unwrap_or("".into());
     fold_siglevels(SigLevel::USE_DEFAULT, siglevels)
 }
 
-/// Finds the SigLevel of a repo; if it fails, fall back to the `default`.
+/// Finds the `SigLevel` of a repo; if it fails, fall back to the specified
+/// `default`.
 pub fn repo_siglevel(repo: &str, default: SigLevel) -> SigLevel {
     let siglevels = read_conf(["--repo=", &repo, "SigLevel"]).unwrap_or("".into());
     fold_siglevels(default, siglevels)
