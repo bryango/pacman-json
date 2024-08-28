@@ -56,10 +56,7 @@ impl PackageFilters {
         if self.recurse.is_none() && !self.all && pkg.reason() != PackageReason::Explicit {
             anyhow::bail!("{:?} not explicitly installed, skipped", pkg);
         }
-        let mut pkg_info = match self.sync {
-            true => PackageInfo::from_sync_pkg(handle, pkg),
-            false => PackageInfo::from(pkg),
-        };
+        let mut pkg_info = PackageInfo::new(handle, pkg, self.sync);
         if !self.plain {
             pkg_info = self.enrich_pkg_info(handle, pkg_info)
         }
@@ -83,10 +80,7 @@ impl PackageFilters {
                 }
                 Ok(pkg) => pkg,
             };
-        let complemetary_info = match self.sync {
-            true => PackageInfo::from(complementary_pkg),
-            false => PackageInfo::from_sync_pkg(handle, complementary_pkg),
-        };
+        let complemetary_info = PackageInfo::new(handle, complementary_pkg, !self.sync);
         if self.sync {
             return pkg_info.add_local_info(complemetary_info);
         }

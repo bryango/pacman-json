@@ -141,10 +141,14 @@ impl<'a> From<&'a Package> for PackageInfo<'a> {
 }
 
 impl<'a> PackageInfo<'a> {
-    /// Generates [`PackageInfo`] from an [`Alpm::syncdbs`] package,
-    /// decoding the associated signature key ID in the process.
-    pub fn from_sync_pkg(handle: &'a Alpm, pkg: &'a Package) -> Self {
-        Self::from(pkg).decode_keyid(handle)
+    /// Generates [`PackageInfo`] with an [`Alpm`] handle. This is useful for
+    /// [`Alpm::syncdbs`] packages, for which we also decode the associated
+    /// signature key ID in the process.
+    pub fn new(handle: &'a Alpm, pkg: &'a Package, sync: bool) -> Self {
+        match sync {
+            true => Self::from(pkg).decode_keyid(handle),
+            false => Self::from(pkg),
+        }
     }
 }
 
