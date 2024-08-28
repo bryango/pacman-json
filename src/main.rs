@@ -2,7 +2,7 @@ use pacjump::info::PackageInfo;
 use pacjump::recurse_deps::recurse_dependencies;
 use pacjump::reverse_deps::ReverseDepsDatabase;
 use pacjump::siglevel::{default_siglevel, repo_siglevel};
-use pacjump::{find_in_databases, read_conf, PackageFilters};
+use pacjump::{find_in_databases, get_databases, read_conf, PackageFilters};
 
 use alpm::Alpm;
 use clap::Parser;
@@ -29,7 +29,7 @@ fn main() -> anyhow::Result<()> {
     eprintln!("SigLevel::{default_siglevel:?}");
     eprintln!("");
 
-    let handle = Alpm::new(root, db_path).unwrap();
+    let handle = &Alpm::new(root, db_path).unwrap();
 
     // register sync databases from pacman.conf
     eprintln!("--repo-list:");
@@ -41,26 +41,22 @@ fn main() -> anyhow::Result<()> {
     eprintln!("");
 
     eprintln!("# generating reverse dependencies ...");
-    let reverse_deps = ReverseDepsDatabase::from(&handle);
+    let reverse_deps = ReverseDepsDatabase::from(handle);
     eprintln!(
         "# done. Required-by pkgs: {}",
         reverse_deps.required_by.len()
     );
     eprintln!("");
 
-    let db_list: Vec<_> = match pkg_filters.sync {
-        true => handle.syncdbs().iter().collect(),
-        false => [handle.localdb()].into(),
-    };
-
+    let databases = get_databases(handle, pkg_filters.sync);
     let all_packages: Vec<PackageInfo<'_>> = if let Some(name) = &pkg_filters.recurse {
-        let pkg = find_in_databases(db_list.clone(), name)?;
-        let pkg_info = pkg_filters.generate_pkg_info(&handle, pkg, &reverse_deps)?;
+        let pkg = find_in_databases(databases.clone(), name)?;
+        let pkg_info = pkg_filters.generate_pkg_info(handle, pkg, &reverse_deps)?;
         let mut deps_set = IndexSet::new();
         let mut deps_pkgs = Vec::new();
         let _ = recurse_dependencies(
-            &handle,
-            db_list,
+            handle,
+            databases,
             &pkg_filters,
             &reverse_deps,
             pkg_info,
@@ -85,7 +81,7 @@ fn main() -> anyhow::Result<()> {
         deps_pkgs
     } else {
         eprintln!("# enumerating all packages ...");
-        db_list
+        databases
             .iter()
             .map(|db| {
                 eprintln!("{}: {}", db.name(), db.pkgs().len());
@@ -93,7 +89,7 @@ fn main() -> anyhow::Result<()> {
                     .iter()
                     .filter_map(|pkg| {
                         pkg_filters
-                            .generate_pkg_info(&handle, pkg, &reverse_deps)
+                            .generate_pkg_info(handle, pkg, &reverse_deps)
                             .ok()
                     })
                     .collect::<Vec<_>>()
