@@ -1,5 +1,4 @@
 use pacjump::info::PackageInfo;
-use pacjump::recurse_deps::recurse_dependencies;
 use pacjump::reverse_deps::ReverseDepsDatabase;
 use pacjump::siglevel::{default_siglevel, repo_siglevel};
 use pacjump::{find_in_databases, get_databases, read_conf, PackageFilters};
@@ -54,12 +53,11 @@ fn main() -> anyhow::Result<()> {
         let pkg_info = pkg_filters.generate_pkg_info(handle, pkg, &reverse_deps)?;
         let mut deps_set = IndexSet::new();
         let mut deps_pkgs = Vec::new();
-        let _ = recurse_dependencies(
+        let _ = pkg_info.recurse_dependencies(
             handle,
             databases,
             &pkg_filters,
             &reverse_deps,
-            pkg_info,
             0,
             &mut deps_set,
             &mut deps_pkgs,

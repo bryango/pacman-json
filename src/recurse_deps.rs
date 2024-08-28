@@ -5,16 +5,18 @@ use crate::info::{DepInfo, PacList, PackageInfo};
 use crate::reverse_deps::ReverseDepsDatabase;
 use crate::PackageFilters;
 
+impl<'a> PackageInfo<'a> {
+
 /// Recurses the dependency tree of a [`PackageInfo`], finds the packages
 /// satisfying the dependency requirements, collects the satisfiers' data
 /// into a mutable [`IndexSet`], and adds the satisfiers' [`PackageInfo`]s
 /// into a mutable [`Vec`].
-pub fn recurse_dependencies<'a, T>(
+pub fn recurse_dependencies<T>(
+    self,
     handle: &'a Alpm,
     databases: T,
     pkg_filters: &PackageFilters,
     reverse_deps: &'a ReverseDepsDatabase,
-    pkg_info: PackageInfo<'a>,
     depth: u64,
     deps_set: &mut IndexSet<String>,
     deps_pkgs: &mut Vec<PackageInfo<'a>>,
@@ -22,6 +24,7 @@ pub fn recurse_dependencies<'a, T>(
 where
     T: IntoIterator<Item = &'a Db> + Clone,
 {
+    let pkg_info = self;
     eprintln!(
         "# level {}: recursing into '{}': {:?}\n",
         depth, pkg_info.name, pkg_info.depends_on
@@ -43,12 +46,11 @@ where
                     let pkg_info = pkg_filters
                         .generate_pkg_info(handle, pkg, &reverse_deps)
                         .unwrap_or(pkg.into());
-                    recurse_dependencies(
+                    pkg_info.recurse_dependencies(
                         &handle,
                         databases.clone(),
                         pkg_filters,
                         &reverse_deps,
-                        pkg_info,
                         next_depth,
                         deps_set,
                         deps_pkgs,
@@ -84,4 +86,6 @@ where
     } else {
         deps_pkgs.push(pkg_info);
     }
+}
+
 }
