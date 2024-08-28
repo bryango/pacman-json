@@ -15,12 +15,12 @@ _pacjump() {
 
     local context curcontext="$curcontext" state line
     _arguments "${_arguments_options[@]}" : \
-'--recurse=[Recursively query the dependencies of the given package; implies '\''--all'\'']:RECURSE: ' \
+'--recurse=[Recursively query the dependencies of the given package; implies \`--all\`]:RECURSE: ' \
 '--sync[Query the sync databases; by default only the local database (of currently installed packages) is queried]' \
 '--all[Query all packages, including those not explicitly installed; by default only explicitly installed packages are shown]' \
 '--plain[Output package info from the current database only; by default we enrich the output by combining information from both the local and the sync databases]' \
-'--optional['\''--recurse'\'' installed optional dependencies as well]' \
-'--summary['\''--recurse'\'' dependencies, but only prints package names and versions]' \
+'--optional[\`--recurse\` installed optional dependencies as well]' \
+'--summary[\`--recurse\` dependencies, but only prints package names and versions]' \
 '-h[Print help]' \
 '--help[Print help]' \
 && ret=0
