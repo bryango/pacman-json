@@ -68,10 +68,7 @@ impl PackageFilters {
     /// matching, it will be preferred as the base info since it contains
     /// more useful details.
     fn enrich_pkg_info<'a>(&self, handle: &'a Alpm, pkg_info: PackageInfo<'a>) -> PackageInfo<'a> {
-        let complementary_databases: Vec<_> = match self.sync {
-            true => [handle.localdb()].into(),
-            false => handle.syncdbs().into_iter().collect(),
-        };
+        let complementary_databases = get_databases(handle, !self.sync);
         let complementary_pkg =
             match find_in_databases(complementary_databases, pkg_info.name.to_string()) {
                 Err(msg) => {
@@ -95,6 +92,14 @@ impl PackageFilters {
             true => sync_info.add_local_info(local_info),
             false => local_info.add_sync_info(sync_info),
         };
+    }
+}
+
+/// Returns a <code>[Box]<[&[alpm::Db]]></code> of the sync or local databases.
+pub fn get_databases<'a>(handle: &'a Alpm, sync: bool) -> Box<[&'a Db]> {
+    match sync {
+        true => handle.syncdbs().iter().collect(),
+        false => [handle.localdb()].into(),
     }
 }
 
