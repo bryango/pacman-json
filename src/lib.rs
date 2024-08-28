@@ -1,7 +1,8 @@
 pub mod info;
-pub mod recurse_deps;
 pub mod reverse_deps;
 pub mod siglevel;
+
+mod recurse_deps;
 
 use alpm::{Alpm, Db, Package, PackageReason};
 use clap::Parser;

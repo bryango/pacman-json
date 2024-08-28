@@ -152,7 +152,7 @@ impl<'a> PackageInfo<'a> {
     }
 }
 
-/// A wrapper of the information of a pacman dependency [`Dep`]
+/// A wrapper of the information of a pacman dependency [`alpm::Dep`]
 /// for ease of serialization by [`serde`].
 #[derive(Serialize, Clone, Debug)]
 pub struct DepInfo<'a> {
@@ -243,8 +243,8 @@ impl<'a> PackageInfo<'a> {
 }
 
 /// A newtype [`Vec`] to enclose various lists, e.g. packages, licenses, ...
-/// returned from alpm. This serves as a proxy for [`AlpmList`] to be
-/// [`Serialize`]d; conversions from [`AlpmList`] are implemented.
+/// returned from [`alpm`]. This serves as a proxy for [`AlpmList`] to be
+/// serialized; conversions from [`AlpmList`] are implemented.
 ///
 /// Note that the naive <code>impl [Serialize] for [AlpmList]</code>
 /// does not work due to rust "orphan rules";
