@@ -31,3 +31,6 @@ serde_json = "1.0.104"
 
 [features]
 backtrace-overflow = ["dep:backtrace-on-stack-overflow"]
+
+[dev-dependencies]
+duct = "0.13.7"
