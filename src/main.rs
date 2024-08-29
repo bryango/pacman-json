@@ -39,8 +39,16 @@ fn main() -> anyhow::Result<()> {
     }
     eprintln!("");
 
-    eprintln!("# generating reverse dependencies ...");
-    let reverse_deps = ReverseDepsDatabase::from(handle);
+    let reverse_deps = match pkg_filters.no_reverse {
+        true => {
+            eprintln!("# skip generating reverse dependencies ...");
+            ReverseDepsDatabase::default()
+        },
+        false => {
+            eprintln!("# generating reverse dependencies ...");
+            ReverseDepsDatabase::from(handle)
+        },
+    };
     eprintln!(
         "# done. Required-by pkgs: {}",
         reverse_deps.required_by.len()

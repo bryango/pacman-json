@@ -35,6 +35,10 @@ pub struct PackageFilters {
     #[arg(long)]
     pub recurse: Option<String>,
 
+    /// Do not provide reverse dependencies information
+    #[arg(long)]
+    pub no_reverse: bool,
+
     /// `--recurse` installed optional dependencies as well
     #[arg(long, requires = "recurse")]
     pub optional: bool,

@@ -113,13 +113,13 @@ pub fn fold_siglevels(default: SigLevel, siglevels: String) -> SigLevel {
 /// Finds the default `SigLevel` from `pacman.conf`; if it fails, fall back to
 /// the default [`SigLevel::USE_DEFAULT`].
 pub fn default_siglevel() -> SigLevel {
-    let siglevels = read_conf(["SigLevel"]).unwrap_or("".into());
+    let siglevels = read_conf(["SigLevel"]).unwrap_or_default();
     fold_siglevels(SigLevel::USE_DEFAULT, siglevels)
 }
 
 /// Finds the `SigLevel` of a repo; if it fails, fall back to the specified
 /// `default`.
 pub fn repo_siglevel(repo: &str, default: SigLevel) -> SigLevel {
-    let siglevels = read_conf(["--repo=", &repo, "SigLevel"]).unwrap_or("".into());
+    let siglevels = read_conf(["--repo=", &repo, "SigLevel"]).unwrap_or_default();
     fold_siglevels(default, siglevels)
 }
