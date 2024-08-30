@@ -1,40 +1,67 @@
-use duct::cmd;
+use std::sync::Once;
+
+fn split_cli_args(args: &str) -> Box<[&str]> {
+    args.split_whitespace().collect()
+}
+
+fn cmd<T>(args: T) -> duct::Expression
+where
+    T: AsRef<str>,
+{
+    fn inner(args: &str) -> duct::Expression {
+        let all_args = split_cli_args(args);
+        let mut args = all_args.iter();
+        let program = *args.next().unwrap();
+        duct::cmd(program, args)
+    }
+    inner(args.as_ref())
+}
+
+fn cargo_run<T>(args: T) -> duct::Expression
+where
+    T: AsRef<str>,
+{
+    fn inner(args: &str) -> duct::Expression {
+        let args = format!("cargo run -- {}", args);
+        cmd(args.trim())
+    }
+    inner(args.as_ref())
+}
+
+static INIT: Once = Once::new();
+
+fn dump_all() -> String {
+    let mut all = String::new();
+    INIT.call_once(|| {
+        all = cargo_run("--all --no-reverse").read().unwrap();
+    });
+    all
+}
 
 #[test]
-fn explicits() {
-    let ours = cmd!("cargo", "run", "--")
-        .pipe(cmd!("jq", "length"))
-        .read()
-        .unwrap();
-    let refs = cmd!("pacman", "-Qe").pipe(cmd!("wc", "-l")).read().unwrap();
+fn explicits_with_reverse_deps() {
+    let ours = cargo_run("").pipe(cmd("jq length")).read().unwrap();
+    let refs = cmd("pacman -Qe").pipe(cmd("wc -l")).read().unwrap();
     debug_assert_eq!(ours, refs)
 }
 
 #[test]
-fn all_packages() {
-    let all = cmd!("cargo", "run", "--", "--all", "--no-reverse");
-    let ours = all.pipe(cmd!("jq", "length")).read().unwrap();
-    let refs = cmd!("pacman", "-Q").pipe(cmd!("wc", "-l")).read().unwrap();
-    debug_assert_eq!(ours, refs)
+fn all_packages_without_reverse_deps() {
+    let all = dump_all();
+    let ours = cmd("jq length").stdin_bytes(all).read().unwrap();
+    let refs = cmd("pacman -Q").pipe(cmd("wc -l")).read().unwrap();
+    debug_assert_eq!(ours, refs);
 }
 
 #[test]
 fn recurse() {
     let pkg = "bash";
-    let sed = cmd!("sed", "-E", "s/^(.*[^><=])[><=].*/\\1/");
-    let ours = cmd!(
-        "cargo",
-        "run",
-        "--",
-        "--recurse",
-        pkg,
-        "--summary",
-        "--no-reverse"
-    )
-    .pipe(sed.clone())
-    .read()
-    .unwrap();
-    let refs = cmd!("pactree", pkg, "--unique")
+    let sed = cmd("sed -E s/^(.*[^><=])[><=].*/\\1/");
+    let ours = cargo_run(format!("--recurse {pkg} --summary --no-reverse"))
+        .pipe(sed.clone())
+        .read()
+        .unwrap();
+    let refs = cmd(format!("pactree {pkg} --unique"))
         .pipe(sed.clone())
         .read()
         .unwrap();
