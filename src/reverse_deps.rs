@@ -59,11 +59,11 @@ pub fn get_reverse_deps_map(
                 reverse_deps
                     .entry(dep.name().to_string())
                     .and_modify(|e| {
-                        e.insert(pkg.name().to_string());
+                        e.insert(format!("{}={}: {}", pkg.name(), pkg.version(), dep));
                     })
                     .or_insert_with(|| {
                         let mut modify = ReverseDeps::new();
-                        modify.insert(pkg.name().to_string());
+                        modify.insert(format!("{}={}: {}", pkg.name(), pkg.version(), dep));
                         modify
                     });
             }
