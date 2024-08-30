@@ -1,3 +1,15 @@
+//! Integration tests for `pacjump`.
+//! Requires:
+//! - `pacman-contrib` for `pactree`
+//! - `jq`
+//! Implicits:
+//! - `cargo`
+//! - `base`
+//!   - `pacman`
+//!   - `coreutils` for `wc`
+//!   - `bash`
+//!   - `sed`
+
 use std::sync::Once;
 
 fn split_cli_args(args: &str) -> Box<[&str]> {
@@ -54,14 +66,28 @@ fn all_packages_without_reverse_deps() {
 }
 
 #[test]
-fn recurse() {
+fn recurse_json() {
+    let pkg = "bash";
+    let ours = cargo_run(format!("--recurse {pkg}"))
+        .pipe(cmd("jq length"))
+        .read()
+        .unwrap();
+    let refs = cmd(format!("pactree --unique {pkg}"))
+        .pipe(cmd("wc -l"))
+        .read()
+        .unwrap();
+    debug_assert_eq!(ours, refs)
+}
+
+#[test]
+fn recurse_summary() {
     let pkg = "bash";
     let sed = cmd("sed -E s/^(.*[^><=])[><=].*/\\1/");
-    let ours = cargo_run(format!("--recurse {pkg} --summary --no-reverse"))
+    let ours = cargo_run(format!("--summary --recurse {pkg}"))
         .pipe(sed.clone())
         .read()
         .unwrap();
-    let refs = cmd(format!("pactree {pkg} --unique"))
+    let refs = cmd(format!("pactree --unique {pkg}"))
         .pipe(sed.clone())
         .read()
         .unwrap();
