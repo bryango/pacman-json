@@ -43,7 +43,8 @@ pub struct PackageFilters {
     #[arg(long, requires = "recurse")]
     pub optional: bool,
 
-    /// `--recurse` dependencies, but only prints package names and versions
+    /// `--recurse` dependencies, but only prints package names and versions;
+    /// implies `--no-reverse` and `--plain`
     #[arg(long, requires = "recurse")]
     pub summary: bool,
 }
@@ -62,10 +63,13 @@ impl PackageFilters {
             anyhow::bail!("{:?} not explicitly installed, skipped", pkg);
         }
         let mut pkg_info = PackageInfo::new(handle, pkg, self.sync);
-        if !self.plain {
+        if !self.plain && !self.summary {
             pkg_info = self.enrich_pkg_info(handle, pkg_info)
         }
-        return Ok(pkg_info.add_reverse_deps(reverse_deps));
+        if !self.no_reverse && !self.summary {
+            pkg_info = pkg_info.add_reverse_deps(reverse_deps)
+        }
+        return Ok(pkg_info);
     }
 
     /// Enriches package with sync & local database information, if desired
