@@ -61,7 +61,7 @@ pub fn get_reverse_deps_map(
                     Some(satisfier) => &[dep.name(),satisfier ],
                     None => &[dep.name() ],
                 };
-                for key in keys {
+                let mut add_key = |key: &str| {
                 reverse_deps
                     .entry(key.to_string())
                     .and_modify(|e| {
@@ -72,6 +72,9 @@ pub fn get_reverse_deps_map(
                         modify.insert(format!("{}={}: {}", pkg.name(), pkg.version(), dep));
                         modify
                     });
+                };
+                for key in keys {
+                    add_key(key);
                 }
             }
         }
