@@ -66,6 +66,12 @@ fn all_packages_without_reverse_deps() {
 }
 
 #[test]
+fn recurse_not_found() {
+    let pkg = "imaginary-fake-package";
+    cargo_run(format!("--recurse {pkg}")).run().unwrap_err();
+}
+
+#[test]
 fn recurse_json() {
     let pkg = "bash";
     let ours = cargo_run(format!("--recurse {pkg}"))

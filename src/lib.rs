@@ -115,7 +115,7 @@ pub fn get_databases<'a>(handle: &'a Alpm, sync: bool) -> Box<[&'a Db]> {
 /// Locates a [`alpm::Package`] from some [`alpm::Db`] databases by its name.
 pub fn find_in_databases<'a, T, S>(databases: T, package_name: S) -> anyhow::Result<&'a Package>
 where
-    T: IntoIterator<Item = &'a Db>,
+    T: IntoIterator<Item = &'a Db> + Clone + std::fmt::Debug,
     S: Into<String>,
 {
     // https://github.com/archlinux/alpm.rs/blob/master/alpm/examples/packages.rs
@@ -124,7 +124,7 @@ where
 
     // iterate through each database
     let name: String = package_name.into();
-    for db in databases {
+    for db in databases.clone() {
         // look for a package by name in a database; the database is
         // implemented as a hashmap so this is faster than iterating:
         match db.pkg(name.as_str()) {
@@ -132,7 +132,12 @@ where
             Err(_) => {}
         }
     }
-    anyhow::bail!("{:?} not found in the sync databases", &name)
+    let database_names: Vec<_> = databases.into_iter().map(|x| x.name()).collect();
+    anyhow::bail!(
+        "{:?} not found in the database(s): {}",
+        &name,
+        database_names.join(", ")
+    )
 }
 
 /// Reads `pacman.conf` via the cli `pacman-conf`. The arguments are directly
