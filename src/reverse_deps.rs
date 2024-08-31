@@ -56,8 +56,14 @@ pub fn get_reverse_deps_map(
     for db in dbs {
         for pkg in db.pkgs() {
             for dep in get_dependencies(pkg) {
+                let satisfier = dbs.find_satisfier(dep.to_string()).map(|pkg| pkg.name());
+                let keys: &[&str] = match satisfier {
+                    Some(satisfier) => &[dep.name(),satisfier ],
+                    None => &[dep.name() ],
+                };
+                for key in keys {
                 reverse_deps
-                    .entry(dep.name().to_string())
+                    .entry(key.to_string())
                     .and_modify(|e| {
                         e.insert(format!("{}={}: {}", pkg.name(), pkg.version(), dep));
                     })
@@ -66,6 +72,7 @@ pub fn get_reverse_deps_map(
                         modify.insert(format!("{}={}: {}", pkg.name(), pkg.version(), dep));
                         modify
                     });
+                }
             }
         }
     }
