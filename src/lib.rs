@@ -47,6 +47,9 @@ pub struct PackageFilters {
     /// implies `--no-reverse` and `--plain`
     #[arg(long, requires = "recurse")]
     pub summary: bool,
+
+    #[arg(long, conflicts_with = "no_reverse")]
+    pub find_satisfier: bool,
 }
 
 impl PackageFilters {

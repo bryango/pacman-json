@@ -20,6 +20,8 @@
 use alpm::{Alpm, AlpmList, Dep, Package};
 use std::collections::{BTreeSet, HashMap};
 
+use crate::find_in_databases;
+
 /// A wrapper of [`BTreeSet`] for reverse dependencies.
 #[derive(Debug, derive_more::Deref, derive_more::DerefMut, serde::Serialize)]
 pub struct ReverseDeps(BTreeSet<String>);
@@ -52,32 +54,37 @@ pub type ReverseDepsMap = HashMap<String, ReverseDeps>;
 pub fn get_reverse_deps_map(
     handle: &Alpm,
     get_dependencies: fn(&Package) -> AlpmList<&Dep>,
+    find_satisfier: bool,
 ) -> ReverseDepsMap {
     let mut reverse_deps: ReverseDepsMap = HashMap::new();
     let dbs = handle.syncdbs();
 
-    for db in dbs {
+    for db in handle.syncdbs() {
         for pkg in db.pkgs() {
             for dep in get_dependencies(pkg) {
-                let satisfier = dbs.find_satisfier(dep.to_string()).map(|pkg| pkg.name());
-                let keys: &[&str] = match satisfier {
-                    Some(satisfier) => &[dep.name(),satisfier ],
-                    None => &[dep.name() ],
+                let dep_string = dep.to_string();
+                let rev_dep = format!("{}={}: {}", pkg.name(), pkg.version(), dep_string);
+
+                let mut add_rev_dep_entry = |key: &str| {
+                    reverse_deps
+                        .entry(key.to_string())
+                        .and_modify(|e| {
+                            e.insert(rev_dep.clone());
+                        })
+                        .or_insert_with(|| {
+                            let mut modify = ReverseDeps::new();
+                            modify.insert(rev_dep.clone());
+                            modify
+                        });
                 };
-                let mut add_key = |key: &str| {
-                reverse_deps
-                    .entry(key.to_string())
-                    .and_modify(|e| {
-                        e.insert(format!("{}={}: {}", pkg.name(), pkg.version(), dep));
-                    })
-                    .or_insert_with(|| {
-                        let mut modify = ReverseDeps::new();
-                        modify.insert(format!("{}={}: {}", pkg.name(), pkg.version(), dep));
-                        modify
-                    });
-                };
-                for key in keys {
-                    add_key(key);
+                add_rev_dep_entry(dep.name());
+                if !find_satisfier || find_in_databases(dbs, dep.name()).is_ok() {
+                    continue;
+                }
+                let satisfier = dbs.find_satisfier(dep_string).map(|pkg| pkg.name());
+                match satisfier {
+                    Some(satisfier) => add_rev_dep_entry(satisfier),
+                    None => {}
                 }
             }
         }
@@ -95,12 +102,12 @@ pub struct ReverseDepsDatabase {
     pub required_by_check: ReverseDepsMap,
 }
 
-impl From<&Alpm> for ReverseDepsDatabase {
+impl ReverseDepsDatabase {
     /// Generates the full complete reverse dependencies maps from the [`Alpm`]
     /// database handle. This is only constructed once, after the database is
     /// fully initialized.
-    fn from(handle: &Alpm) -> Self {
-        let get = |f| get_reverse_deps_map(&handle, f);
+    pub fn populate(handle: &Alpm, find_satisfier: bool) -> Self {
+        let get = |f| get_reverse_deps_map(&handle, f, find_satisfier);
         Self {
             optional_for: get(|pkg| pkg.optdepends()),
             required_by: get(|pkg| pkg.depends()),
