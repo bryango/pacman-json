@@ -5,6 +5,7 @@
 //! Implicits:
 //! - `cargo`
 //! - `base`
+//!   - `glibc`
 //!   - `pacman`
 //!   - `coreutils` for `wc`
 //!   - `bash`
@@ -51,8 +52,8 @@ fn dump_all() -> String {
 }
 
 #[test]
-fn explicits_with_reverse_deps() {
-    let ours = cargo_run("").pipe(cmd("jq length")).read().unwrap();
+fn explicits_with_reverse_providers() {
+    let ours = cargo_run("--find-providers").pipe(cmd("jq length")).read().unwrap();
     let refs = cmd("pacman -Qe").pipe(cmd("wc -l")).read().unwrap();
     debug_assert_eq!(ours, refs)
 }
@@ -83,6 +84,14 @@ fn recurse_json() {
         .read()
         .unwrap();
     debug_assert_eq!(ours, refs)
+}
+
+#[test]
+fn recurse_optional_deps() {
+    let pkg = "glibc";
+    cargo_run(format!("--summary --recurse {pkg} --optional"))
+        .run()
+        .unwrap();
 }
 
 #[test]

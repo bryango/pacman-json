@@ -1,0 +1,7 @@
+[default]
+run-types = ["AllTargets", "Doctests"]
+engine = "Llvm"
+skip-clean = true
+
+[report]
+out = ["Html"]
