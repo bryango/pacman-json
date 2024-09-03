@@ -48,8 +48,9 @@ pub struct PackageFilters {
     #[arg(long, requires = "recurse")]
     pub summary: bool,
 
+    /// Search for provider packages when enumerating reverse dependencies
     #[arg(long, conflicts_with = "no_reverse")]
-    pub find_satisfier: bool,
+    pub find_providers: bool,
 }
 
 impl PackageFilters {

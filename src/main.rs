@@ -46,7 +46,7 @@ fn main() -> anyhow::Result<()> {
         }
         false => {
             eprintln!("# generating reverse dependencies ...");
-            ReverseDepsDatabase::populate(handle, pkg_filters.find_satisfier)
+            ReverseDepsDatabase::populate(handle, pkg_filters.find_providers)
         }
     };
     eprintln!(

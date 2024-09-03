@@ -54,7 +54,7 @@ pub type ReverseDepsMap = HashMap<String, ReverseDeps>;
 pub fn get_reverse_deps_map(
     handle: &Alpm,
     get_dependencies: fn(&Package) -> AlpmList<&Dep>,
-    find_satisfier: bool,
+    find_providers: bool,
 ) -> ReverseDepsMap {
     let mut reverse_deps: ReverseDepsMap = HashMap::new();
     let dbs = handle.syncdbs();
@@ -78,7 +78,7 @@ pub fn get_reverse_deps_map(
                         });
                 };
                 add_rev_dep_entry(dep.name());
-                if !find_satisfier || find_in_databases(dbs, dep.name()).is_ok() {
+                if !find_providers || find_in_databases(dbs, dep.name()).is_ok() {
                     continue;
                 }
                 let satisfier = dbs.find_satisfier(dep_string).map(|pkg| pkg.name());
@@ -106,8 +106,8 @@ impl ReverseDepsDatabase {
     /// Generates the full complete reverse dependencies maps from the [`Alpm`]
     /// database handle. This is only constructed once, after the database is
     /// fully initialized.
-    pub fn populate(handle: &Alpm, find_satisfier: bool) -> Self {
-        let get = |f| get_reverse_deps_map(&handle, f, find_satisfier);
+    pub fn populate(handle: &Alpm, find_providers: bool) -> Self {
+        let get = |f| get_reverse_deps_map(&handle, f, find_providers);
         Self {
             optional_for: get(|pkg| pkg.optdepends()),
             required_by: get(|pkg| pkg.depends()),
