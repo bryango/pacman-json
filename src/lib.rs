@@ -84,7 +84,9 @@ impl PackageFilters {
         let complementary_pkg =
             match find_in_databases(complementary_databases, pkg_info.name.to_string()) {
                 Err(msg) => {
-                    eprintln!("{msg}");
+                    if !self.sync {
+                        eprintln!("{msg}");
+                    }
                     return pkg_info;
                 }
                 Ok(pkg) => pkg,
