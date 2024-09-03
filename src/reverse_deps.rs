@@ -1,7 +1,7 @@
 //! A module that generates different kinds of reverse dependencies from pacman
 //! sync databases and gathers them in a big [HashMap] from package names to
 //! their respective [BTreeSet]s of reverse dependencies. The key ingredient,
-//! [`get_reverse_deps_map`], is stolen from <https://github.com/jelly/pacquery>.
+//! [`get_reverse_deps_map`], is stolen from [`jelly/pacquery`].
 //!
 //! Note that [`alpm::Package`] does provide reverse dependency information
 //! through e.g. [`alpm::Pkg::required_by()`] but it is very slow to enumerate
@@ -13,6 +13,8 @@
 //! database; thus the reimplementation.
 //!
 //! See: [`alpm_sys::alpm_pkg_compute_requiredby()`]
+//!
+//! [`jelly/pacquery`]: https://github.com/jelly/pacquery
 //!
 
 use alpm::{Alpm, AlpmList, Dep, Package};
@@ -44,7 +46,8 @@ pub type ReverseDepsMap = HashMap<String, ReverseDeps>;
 /// [`Alpm::syncdbs`]. The type of dependencies are specified by the
 /// `get_dependencies` argument. See [`ReverseDepsDatabase`] for its usage.
 ///
-/// This function is ported from: <https://github.com/jelly/pacquery>.
+/// This function is ported from:
+/// [`jelly/pacquery`](https://github.com/jelly/pacquery).
 ///
 pub fn get_reverse_deps_map(
     handle: &Alpm,
