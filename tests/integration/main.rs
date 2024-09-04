@@ -35,7 +35,11 @@ where
     T: AsRef<str>,
 {
     fn inner(args: &str) -> duct::Expression {
-        let args = format!("cargo run -- {}", args);
+        let flags = match cfg!(tarpaulin) {
+            true => "--target-dir=target/tarpaulin",
+            false => "",
+        };
+        let args = format!("cargo run {flags} -- {args}");
         cmd(args.trim())
     }
     inner(args.as_ref())

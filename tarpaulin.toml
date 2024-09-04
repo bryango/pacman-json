@@ -2,6 +2,8 @@
 run-types = ["AllTargets", "Doctests"]
 engine = "Llvm"
 skip-clean = true
+target-dir = "target/tarpaulin"
+exclude-files = ["target/*"]
 
 [report]
 out = ["Html"]
