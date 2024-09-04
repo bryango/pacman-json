@@ -1,36 +1,9 @@
 use pacjump::info::PackageInfo;
 use pacjump::reverse_deps::ReverseDepsDatabase;
-use pacjump::siglevel::{default_siglevel, repo_siglevel};
-use pacjump::{find_in_databases, get_databases, read_conf, PackageFilters};
+use pacjump::{alpm_default, find_in_databases, get_databases, PackageFilters};
 
-use alpm::Alpm;
 use clap::Parser;
 use indexmap::IndexSet;
-
-fn alpm_initialize() -> Result<Alpm, alpm::Error> {
-    let root = read_conf(["RootDir"]).unwrap_or("/".into());
-    let db_path = read_conf(["DBPath"]).unwrap_or("/var/lib/pacman/".into());
-    let all_repos = read_conf(["--repo-list"]).unwrap_or(["core", "extra", "multilib"].join("\n"));
-    eprintln!("RootDir: {root}");
-    eprintln!("DBPath: {db_path}");
-
-    let default_siglevel = default_siglevel();
-    eprintln!("SigLevel::{default_siglevel:?}");
-    eprintln!("");
-
-    let handle = Alpm::new(root, db_path)?;
-
-    // register sync databases from pacman.conf
-    eprintln!("--repo-list:");
-    for repo in all_repos.split_terminator('\n') {
-        let sig_level = repo_siglevel(repo, default_siglevel);
-        handle.register_syncdb(repo, sig_level).unwrap();
-        eprintln!("{repo}: SigLevel::{sig_level:?}");
-    }
-    eprintln!("");
-
-    Ok(handle)
-}
 
 /// Dumps json data of the explicitly installed pacman packages.
 /// Local packages are matched against the sync databases,
@@ -42,7 +15,7 @@ fn main() -> anyhow::Result<()> {
         backtrace_on_stack_overflow::enable()
     };
     let pkg_filters = PackageFilters::parse();
-    let handle = &alpm_initialize()?;
+    let handle = &alpm_default()?;
 
     let reverse_deps = match pkg_filters.no_reverse || pkg_filters.summary {
         true => {

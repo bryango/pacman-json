@@ -6,8 +6,10 @@ mod recurse_deps;
 
 use alpm::{Alpm, Db, Package, PackageReason};
 use clap::Parser;
+
 use info::PackageInfo;
 use reverse_deps::ReverseDepsDatabase;
+use siglevel::{default_siglevel, repo_siglevel};
 
 /// Available filters for pacman packages, exposed
 /// through the command line interface.
@@ -173,4 +175,29 @@ where
     };
 
     Ok(trimmed_string)
+}
+
+pub fn alpm_default() -> Result<Alpm, alpm::Error> {
+    let root = read_conf(["RootDir"]).unwrap_or("/".into());
+    let db_path = read_conf(["DBPath"]).unwrap_or("/var/lib/pacman/".into());
+    let all_repos = read_conf(["--repo-list"]).unwrap_or(["core", "extra", "multilib"].join("\n"));
+    eprintln!("RootDir: {root}");
+    eprintln!("DBPath: {db_path}");
+
+    let default_siglevel = default_siglevel();
+    eprintln!("SigLevel::{default_siglevel:?}");
+    eprintln!("");
+
+    let handle = Alpm::new(root, db_path)?;
+
+    // register sync databases from pacman.conf
+    eprintln!("--repo-list:");
+    for repo in all_repos.split_terminator('\n') {
+        let sig_level = repo_siglevel(repo, default_siglevel);
+        handle.register_syncdb(repo, sig_level).unwrap();
+        eprintln!("{repo}: SigLevel::{sig_level:?}");
+    }
+    eprintln!("");
+
+    Ok(handle)
 }
