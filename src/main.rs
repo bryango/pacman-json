@@ -7,17 +7,7 @@ use alpm::Alpm;
 use clap::Parser;
 use indexmap::IndexSet;
 
-/// Dumps json data of the explicitly installed pacman packages.
-/// Local packages are matched against the sync databases,
-/// and upstream info is added to the output.
-fn main() -> anyhow::Result<()> {
-    #[cfg(debug_assertions)]
-    #[cfg(feature = "backtrace-overflow")]
-    unsafe {
-        backtrace_on_stack_overflow::enable()
-    };
-    let pkg_filters = PackageFilters::parse();
-
+fn alpm_initialize() -> Result<Alpm, alpm::Error> {
     let root = read_conf(["RootDir"]).unwrap_or("/".into());
     let db_path = read_conf(["DBPath"]).unwrap_or("/var/lib/pacman/".into());
     let all_repos = read_conf(["--repo-list"]).unwrap_or(["core", "extra", "multilib"].join("\n"));
@@ -28,7 +18,7 @@ fn main() -> anyhow::Result<()> {
     eprintln!("SigLevel::{default_siglevel:?}");
     eprintln!("");
 
-    let handle = &Alpm::new(root, db_path).unwrap();
+    let handle = Alpm::new(root, db_path)?;
 
     // register sync databases from pacman.conf
     eprintln!("--repo-list:");
@@ -38,6 +28,21 @@ fn main() -> anyhow::Result<()> {
         eprintln!("{repo}: SigLevel::{sig_level:?}");
     }
     eprintln!("");
+
+    Ok(handle)
+}
+
+/// Dumps json data of the explicitly installed pacman packages.
+/// Local packages are matched against the sync databases,
+/// and upstream info is added to the output.
+fn main() -> anyhow::Result<()> {
+    #[cfg(debug_assertions)]
+    #[cfg(feature = "backtrace-overflow")]
+    unsafe {
+        backtrace_on_stack_overflow::enable()
+    };
+    let pkg_filters = PackageFilters::parse();
+    let handle = &alpm_initialize()?;
 
     let reverse_deps = match pkg_filters.no_reverse || pkg_filters.summary {
         true => {
