@@ -180,8 +180,8 @@ impl<'a> From<&'a Dep> for DepInfo<'a> {
 }
 
 impl<'a> PackageInfo<'a> {
-    /// Tries to decode the signature of an [`Alpm::syncdbs`] package with an [`Alpm`]
-    /// handle and return the key ID.
+    /// Tries to decode the signature of an [`Alpm::syncdbs`] package with
+    /// an [`Alpm`] handle and return the key ID.
     fn get_keyid(&self, handle: &'a Alpm) -> anyhow::Result<Vec<Box<str>>> {
         let decoded = match self.signatures {
             None => anyhow::bail!("signatures not found for {self:?}"),
