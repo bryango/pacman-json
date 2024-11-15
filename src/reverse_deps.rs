@@ -95,6 +95,7 @@ pub fn get_reverse_deps_map(
 
 /// A collection of all different kinds of reverse dependencies maps.
 #[derive(Default)]
+#[allow(missing_docs)]
 pub struct ReverseDepsDatabase {
     pub optional_for: ReverseDepsMap,
     pub required_by: ReverseDepsMap,

@@ -1,3 +1,6 @@
+#![warn(missing_docs)]
+#![doc = include_str!("../README.md")]
+
 pub mod info;
 pub mod reverse_deps;
 pub mod siglevel;
@@ -177,6 +180,7 @@ where
     Ok(trimmed_string)
 }
 
+/// Tries to obtain the default [`Alpm`] handle
 pub fn alpm_default() -> Result<Alpm, alpm::Error> {
     let root = read_conf(["RootDir"]).unwrap_or("/".into());
     let db_path = read_conf(["DBPath"]).unwrap_or("/var/lib/pacman/".into());

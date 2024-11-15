@@ -30,6 +30,7 @@ impl<T: Debug> DebugFormat for T {}
 /// [`package.c`]: https://gitlab.archlinux.org/pacman/pacman/-/blob/master/src/pacman/package.c
 ///
 #[derive(Serialize, Clone, Debug)]
+#[allow(missing_docs)]
 #[non_exhaustive]
 pub struct PackageInfo<'a> {
     // #[allow(dead_code)]
@@ -155,6 +156,8 @@ impl<'a> PackageInfo<'a> {
 /// A wrapper of the information of a pacman dependency [`alpm::Dep`]
 /// for ease of serialization by [`serde`].
 #[derive(Serialize, Clone, Debug)]
+#[allow(missing_docs)]
+#[non_exhaustive]
 pub struct DepInfo<'a> {
     pub dep_string: String,
     pub name: &'a str,

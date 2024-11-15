@@ -20,6 +20,7 @@ required-features = ["shell-completions"]
 
 [dependencies]
 alpm = "4.0"
+alpm-sys = "*" # follows `alpm`, used for documentations
 anyhow = "1.0.80"
 backtrace-on-stack-overflow = { version = "0.3.0", optional = true }
 clap = { version = "4.5.2", features = ["derive"] }

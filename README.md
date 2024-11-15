@@ -2,7 +2,7 @@
 **pac**man **j**son d**ump**: dump pacman packages information in JSON.
 
 This package focuses on the local pacman database, yet it borrows some key
-ingredients from https://github.com/jelly/pacquery which focuses more on the
+ingredients from <https://github.com/jelly/pacquery> which focuses more on the
 sync databases.
 
 > Note: this package used to have the name `pacman-json`, but it was renamed
@@ -49,3 +49,11 @@ pacjump --recurse=texstudio | jq '
 Additional options can be found with `pacjump --help`. Shell completions
 generated from [**./src/completions.rs**](./src/completions.rs) are provided
 under [**./completions/**](./completions/).
+
+## develop & install
+
+Ironically, pacjump is packaged with Nix in `flake.nix` and `package.nix`. This ensures that:
+
+- We have the compatible `pacman` version (note that `pacman` itself is packaged in `nixpkgs`)
+- The dependencies and shell completions can be automagically installed with `nix build` and `nix profile install`
+- A development shell is automagically generated with `nix develop`
