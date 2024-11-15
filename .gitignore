@@ -1,2 +1,5 @@
 /target
-tarpaulin-report.html
+/tarpaulin-report.html
+/.direnv
+/.envrc
+/result
