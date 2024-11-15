@@ -25,8 +25,10 @@ Register-ArgumentCompleter -Native -CommandName 'pacjump' -ScriptBlock {
             [CompletionResult]::new('--sync', '--sync', [CompletionResultType]::ParameterName, 'Query the sync databases; by default only the local database (of currently installed packages) is queried')
             [CompletionResult]::new('--all', '--all', [CompletionResultType]::ParameterName, 'Query all packages, including those not explicitly installed; by default only explicitly installed packages are shown')
             [CompletionResult]::new('--plain', '--plain', [CompletionResultType]::ParameterName, 'Output package info from the current database only; by default we enrich the output by combining information from both the local and the sync databases')
+            [CompletionResult]::new('--no-reverse', '--no-reverse', [CompletionResultType]::ParameterName, 'Do not provide reverse dependencies information')
             [CompletionResult]::new('--optional', '--optional', [CompletionResultType]::ParameterName, '`--recurse` installed optional dependencies as well')
-            [CompletionResult]::new('--summary', '--summary', [CompletionResultType]::ParameterName, '`--recurse` dependencies, but only prints package names and versions')
+            [CompletionResult]::new('--summary', '--summary', [CompletionResultType]::ParameterName, '`--recurse` dependencies, but only prints package names and versions; implies `--no-reverse` and `--plain`')
+            [CompletionResult]::new('--find-providers', '--find-providers', [CompletionResultType]::ParameterName, 'Search for provider packages when enumerating reverse dependencies')
             [CompletionResult]::new('-h', '-h', [CompletionResultType]::ParameterName, 'Print help')
             [CompletionResult]::new('--help', '--help', [CompletionResultType]::ParameterName, 'Print help')
             break

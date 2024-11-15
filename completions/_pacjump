@@ -19,8 +19,10 @@ _pacjump() {
 '--sync[Query the sync databases; by default only the local database (of currently installed packages) is queried]' \
 '--all[Query all packages, including those not explicitly installed; by default only explicitly installed packages are shown]' \
 '--plain[Output package info from the current database only; by default we enrich the output by combining information from both the local and the sync databases]' \
+'--no-reverse[Do not provide reverse dependencies information]' \
 '--optional[\`--recurse\` installed optional dependencies as well]' \
-'--summary[\`--recurse\` dependencies, but only prints package names and versions]' \
+'--summary[\`--recurse\` dependencies, but only prints package names and versions; implies \`--no-reverse\` and \`--plain\`]' \
+'(--no-reverse)--find-providers[Search for provider packages when enumerating reverse dependencies]' \
 '-h[Print help]' \
 '--help[Print help]' \
 && ret=0

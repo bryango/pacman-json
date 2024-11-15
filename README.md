@@ -48,7 +48,10 @@ pacjump --recurse=texstudio | jq '
 
 Additional options can be found with `pacjump --help`. Shell completions
 generated from [**./src/completions.rs**](./src/completions.rs) are provided
-under [**./completions/**](./completions/).
+under [**./completions/**](./completions/). To regenerate the completions, execute:
+```bash
+( cd completions && cargo run --bin=pacjump-completions --features=shell-completions )
+```
 
 ## develop & install
 

@@ -32,15 +32,10 @@ rustPlatform.buildRustPackage {
 
   postInstall = ''
     pushd completions
-
-    # regenerate shell completions
-    cargo run --bin=pacjump-completions --features=shell-completions
-
     installShellCompletion --cmd hydra-check \
       --bash pacjump.bash \
       --fish pacjump.fish \
       --zsh _pacjump
-
     popd
   '';
 
