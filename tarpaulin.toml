@@ -1,5 +1,7 @@
 [default]
+# run-types = ["AllTargets"]
 run-types = ["AllTargets", "Doctests"]
+# run-types = ["Doctests"]
 engine = "Llvm"
 skip-clean = true
 target-dir = "target/tarpaulin"

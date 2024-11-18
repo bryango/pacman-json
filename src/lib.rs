@@ -97,13 +97,13 @@ impl PackageFilters {
                 }
                 Ok(pkg) => pkg,
             };
-        let complemetary_info = PackageInfo::new(handle, complementary_pkg, !self.sync);
+        let complementary_info = PackageInfo::new(handle, complementary_pkg, !self.sync);
         if self.sync {
-            return pkg_info.add_local_info(complemetary_info);
+            return pkg_info.add_local_info(complementary_info);
         }
         // otherwise, the input `pkg` is local:
         let local_info = pkg_info;
-        let sync_info = complemetary_info;
+        let sync_info = complementary_info;
 
         return match true
             && local_info.packager == sync_info.packager
