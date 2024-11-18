@@ -16,9 +16,18 @@ rustPlatform.buildRustPackage {
 
   nativeBuildInputs = [
     pkg-config
-    mold-wrapped # fast linker, configured in ./.cargo/config.toml
     installShellFiles
+    mold-wrapped # fast linker, configured below
   ];
+
+  env =
+    let
+      rustflagMold = "-Clink-arg=-fuse-ld=mold";
+    in
+    {
+      RUSTFLAGS = rustflagMold;
+      RUSTDOCFLAGS = rustflagMold;
+    };
 
   buildInputs = [
     pacman

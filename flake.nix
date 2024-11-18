@@ -25,14 +25,13 @@
         default = final.pacjump.overrideAttrs ({ nativeBuildInputs, ... }: {
 
           nativeBuildInputs = with pkgs.buildPackages; [
-            cargo # with shell completions, instead of cargo-auditable
+            rustup # shell completions & +nightly support for doctest coverage
             cargo-tarpaulin # show test coverage
-          ] ++ nativeBuildInputs;
 
-          env = {
-            # for developments, e.g. symbol lookup in std library
-            RUST_SRC_PATH = "${pkgs.rustPlatform.rustLibSrc}";
-          };
+            # for integration tests
+            pacman
+            jq
+          ] ++ nativeBuildInputs;
         });
       });
     };
