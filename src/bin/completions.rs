@@ -5,12 +5,12 @@
 
 use clap::{CommandFactory, ValueEnum};
 use clap_complete::Shell;
-use std::env;
+use std::{env, path::PathBuf};
 
 use pacjump::PackageFilters;
 
 fn main() -> anyhow::Result<()> {
-    let out_dir = env::current_dir()?;
+    let out_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("completions");
     for variant in Shell::value_variants() {
         clap_complete::generate_to(
             *variant,

@@ -50,7 +50,7 @@ Additional options can be found with `pacjump --help`. Shell completions
 generated from [**./src/completions.rs**](./src/completions.rs) are provided
 under [**./completions/**](./completions/). To regenerate the completions, execute:
 ```bash
-( cd completions && cargo run --bin=pacjump-completions --features=shell-completions )
+cargo generate-pacjump-completions # alias defined in `.cargo/config.toml`
 ```
 
 ## develop & install

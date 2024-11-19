@@ -12,8 +12,7 @@ edition = "2021"
 default-run = "pacjump"
 
 [[bin]]
-name = "pacjump-completions"
-path = "src/completions.rs"
+name = "completions"
 required-features = ["shell-completions"]
 
 ## https://doc.rust-lang.org/cargo/reference/manifest.html
